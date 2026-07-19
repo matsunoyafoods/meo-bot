@@ -1,0 +1,109 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { env } from "@/lib/env";
+import {
+  articleSystemPrompt,
+  articleUserPrompt,
+  kpiSummarySystemPrompt,
+  kpiSummaryUserPrompt,
+  ownerEditToReplySystemPrompt,
+  reviewReplySystemPrompt,
+  reviewReplyUserPrompt,
+  translateReviewSystemPrompt,
+  type StoreContext,
+} from "@/lib/gemini/prompts";
+
+let client: GoogleGenerativeAI | null = null;
+function genAI(): GoogleGenerativeAI {
+  if (!client) client = new GoogleGenerativeAI(env.geminiApiKey());
+  return client;
+}
+
+/**
+ * systemInstruction + JSON 強制で Gemini を1回呼び、JSON を返す共通関数。
+ */
+async function generateJson<T>(
+  systemInstruction: string,
+  userText: string,
+): Promise<T> {
+  const model = genAI().getGenerativeModel({
+    model: env.geminiModel(),
+    systemInstruction,
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.7,
+    },
+  });
+
+  const res = await model.generateContent(userText);
+  const raw = res.response.text();
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    // まれに ```json フェンスが付く場合の保険
+    const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    return JSON.parse(cleaned) as T;
+  }
+}
+
+/* ---------- ① 口コミ返信案（言語判定込み） ---------- */
+export function generateReviewReply(
+  store: StoreContext,
+  review: { starRating: number; reviewerName?: string | null; comment?: string | null },
+): Promise<{ review_lang: string; reply: string }> {
+  return generateJson(
+    reviewReplySystemPrompt(store),
+    reviewReplyUserPrompt(review),
+  );
+}
+
+/* ---------- ② 口コミをオーナー母国語へ翻訳 ---------- */
+export async function translateReviewForOwner(
+  comment: string,
+  ownerLang: string,
+): Promise<string> {
+  const { translation } = await generateJson<{ translation: string }>(
+    translateReviewSystemPrompt(ownerLang),
+    JSON.stringify({ text: comment }),
+  );
+  return translation;
+}
+
+/* ---------- ③ オーナーの編集文 → 相手の言語の返信 ---------- */
+export async function translateOwnerEditToReply(
+  store: StoreContext,
+  ownerMessage: string,
+  reviewerLang: string,
+): Promise<string> {
+  const { reply } = await generateJson<{ reply: string }>(
+    ownerEditToReplySystemPrompt(store, reviewerLang),
+    JSON.stringify({ owner_message: ownerMessage }),
+  );
+  return reply;
+}
+
+/* ---------- ④ 日常記事（km/en） ---------- */
+export function generateArticle(
+  store: StoreContext,
+  theme: string,
+): Promise<{ topic: string; body_km: string; body_en: string }> {
+  return generateJson(articleSystemPrompt(store), articleUserPrompt(theme));
+}
+
+/* ---------- ⑤ 週報KPI要約 ---------- */
+export async function summarizeKpi(
+  ownerLang: string,
+  data: {
+    routeRequests: number;
+    phoneCalls: number;
+    conversionRate: number;
+    avgTicketAmount: number;
+    currency: string;
+    estimatedRevenue: number;
+  },
+): Promise<string> {
+  const { summary } = await generateJson<{ summary: string }>(
+    kpiSummarySystemPrompt(ownerLang),
+    kpiSummaryUserPrompt(data),
+  );
+  return summary;
+}

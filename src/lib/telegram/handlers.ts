@@ -1,0 +1,311 @@
+import { randomUUID } from "node:crypto";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  answerCallbackQuery,
+  editMessageText,
+  sendMessage,
+  type TgUpdate,
+  type TgCallbackQuery,
+  type TgMessage,
+  type InlineKeyboard,
+} from "@/lib/telegram/client";
+import { t, langName } from "@/lib/telegram/i18n";
+import { langLabel } from "@/lib/gemini/prompts";
+import type { OwnerLang, StoreRow, ReviewRow } from "@/lib/supabase/database.types";
+import {
+  ensureStoreForChat,
+  getStoreByChatId,
+  updateStore,
+  getOwnerState,
+  setOwnerState,
+  clearOwnerState,
+  getReview,
+} from "@/lib/repo";
+import { buildAuthUrl } from "@/lib/google/oauth";
+import { replyToReview } from "@/lib/google/business";
+import { translateOwnerEditToReply } from "@/lib/gemini/client";
+import { toStoreContext } from "@/lib/store-context";
+import { publishPost } from "@/lib/workflows/article";
+
+/** webhook のエントリーポイント */
+export async function handleUpdate(update: TgUpdate): Promise<void> {
+  try {
+    if (update.callback_query) {
+      await handleCallback(update.callback_query);
+    } else if (update.message) {
+      await handleMessage(update.message);
+    }
+  } catch (err) {
+    console.error("[telegram] handleUpdate error", err);
+  }
+}
+
+/* ============================================================
+ * メッセージ（コマンド + 自由入力）
+ * ============================================================ */
+async function handleMessage(msg: TgMessage): Promise<void> {
+  const chatId = msg.chat.id;
+  const text = (msg.text ?? "").trim();
+
+  if (text.startsWith("/start")) return cmdStart(chatId);
+  if (text.startsWith("/settings")) return cmdSettings(chatId);
+
+  // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力）
+  const store = await getStoreByChatId(chatId);
+  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+
+  const state = await getOwnerState(store.id);
+  if (state?.mode === "awaiting_review_edit") {
+    return handleReviewEditText(store, state.context.review_id as string, text);
+  }
+  if (state?.mode === "awaiting_ticket_amount") {
+    return handleTicketText(store, text);
+  }
+  // 状態が無ければ軽くヘルプ
+  await sendMessage(chatId, t(store.owner_lang, "settings_title"));
+}
+
+/* ---------- /start : 店舗作成 + OAuth URL ---------- */
+async function cmdStart(chatId: number): Promise<void> {
+  const store = await ensureStoreForChat(chatId);
+  const lang = store.owner_lang;
+
+  // OAuth state を発行して chat と紐づけ
+  const state = randomUUID();
+  const supabase = createSupabaseAdminClient();
+  await supabase.from("oauth_states").insert({ state, telegram_chat_id: chatId });
+
+  const url = buildAuthUrl(state);
+  await sendMessage(chatId, t(lang, "welcome"), [
+    [{ text: t(lang, "connect_google"), url }],
+  ]);
+}
+
+/* ---------- /settings : インラインメニュー ---------- */
+async function cmdSettings(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  const lang = store.owner_lang;
+  await sendMessage(chatId, t(lang, "settings_title"), [
+    [{ text: t(lang, "set_language"), callback_data: "set_lang_menu" }],
+    [{ text: t(lang, "set_ticket"), callback_data: "set_ticket" }],
+  ]);
+}
+
+/* ---------- 客単価テキスト入力 ---------- */
+async function handleTicketText(store: StoreRow, text: string): Promise<void> {
+  const lang = store.owner_lang;
+  // "10 USD" / "40000 KHR" / "$10" などを緩くパース
+  const m = text.match(/([\d.,]+)\s*([A-Za-z$￥¥]{1,4})?/);
+  if (!m) {
+    return void sendMessage(store.telegram_chat_id!, t(lang, "ticket_invalid"));
+  }
+  const amount = Number(m[1].replace(/,/g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return void sendMessage(store.telegram_chat_id!, t(lang, "ticket_invalid"));
+  }
+  const currency = normalizeCurrency(m[2]);
+  await updateStore(store.id, {
+    avg_ticket_amount: amount,
+    avg_ticket_currency: currency,
+  });
+  await clearOwnerState(store.id);
+  await sendMessage(
+    store.telegram_chat_id!,
+    t(lang, "ticket_saved", { amount, currency }),
+  );
+}
+
+function normalizeCurrency(raw?: string): string {
+  if (!raw) return "USD";
+  const c = raw.toUpperCase().replace("$", "USD").replace(/[￥¥]/, "JPY");
+  return ["USD", "KHR", "JPY", "CNY"].includes(c) ? c : "USD";
+}
+
+/* ---------- 編集フロー: オーナー入力 → 相手言語へ翻訳 ---------- */
+async function handleReviewEditText(
+  store: StoreRow,
+  reviewId: string,
+  text: string,
+): Promise<void> {
+  const lang = store.owner_lang;
+  const review = await getReview(reviewId);
+  if (!review) {
+    await clearOwnerState(store.id);
+    return void sendMessage(store.telegram_chat_id!, t(lang, "error"));
+  }
+
+  const reviewerLang = review.review_lang ?? "en";
+  const reply = await translateOwnerEditToReply(
+    toStoreContext(store),
+    text,
+    reviewerLang,
+  );
+
+  // 返信案を差し替えて保存
+  const supabase = createSupabaseAdminClient();
+  await supabase.from("reviews").update({ draft_reply: reply }).eq("id", reviewId);
+  await clearOwnerState(store.id);
+
+  const preview = [
+    `<b>${t(lang, "edit_preview", { lang: langLabel(reviewerLang) })}:</b>`,
+    escapeHtml(reply),
+  ].join("\n");
+  await sendMessage(store.telegram_chat_id!, preview, [
+    [
+      { text: t(lang, "btn_send"), callback_data: `rev_send:${reviewId}` },
+      { text: t(lang, "btn_edit"), callback_data: `rev_edit:${reviewId}` },
+    ],
+  ]);
+}
+
+/* ============================================================
+ * コールバック（インラインボタン）
+ * ============================================================ */
+async function handleCallback(cb: TgCallbackQuery): Promise<void> {
+  const data = cb.data ?? "";
+  const chatId = cb.message?.chat.id;
+  if (!chatId) return void answerCallbackQuery(cb.id);
+
+  const store = await getStoreByChatId(chatId);
+  if (!store) {
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t("ja", "not_connected"));
+  }
+
+  // --- 設定: 言語メニュー ---
+  if (data === "set_lang_menu") {
+    await answerCallbackQuery(cb.id);
+    return showLanguageMenu(store, cb);
+  }
+  if (data.startsWith("set_lang:")) {
+    const lang = data.split(":")[1] as OwnerLang;
+    await updateStore(store.id, { owner_lang: lang });
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(lang, "lang_saved", { lang: langName(lang) }));
+  }
+  if (data === "set_ticket") {
+    await setOwnerState(store.id, "awaiting_ticket_amount", {});
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(store.owner_lang, "ask_ticket"));
+  }
+
+  // --- 口コミ: 送信 / 編集 ---
+  if (data.startsWith("rev_send:")) {
+    return sendReviewNow(store, data.split(":")[1], cb);
+  }
+  if (data.startsWith("rev_edit:")) {
+    const reviewId = data.split(":")[1];
+    await setOwnerState(store.id, "awaiting_review_edit", { review_id: reviewId });
+    await answerCallbackQuery(cb.id);
+    const review = await getReview(reviewId);
+    const reviewerLang = review?.review_lang ?? "en";
+    return void sendMessage(
+      chatId,
+      t(store.owner_lang, "ask_edit", { lang: langLabel(reviewerLang) }),
+    );
+  }
+
+  // --- 記事: 投稿 / 見送り ---
+  if (data.startsWith("post_pub:")) {
+    return publishNow(store, data.split(":")[1], cb);
+  }
+  if (data.startsWith("post_skip:")) {
+    const supabase = createSupabaseAdminClient();
+    await supabase.from("posts").update({ status: "skipped" }).eq("id", data.split(":")[1]);
+    await answerCallbackQuery(cb.id, t(store.owner_lang, "skipped"));
+    if (cb.message) await stripButtons(chatId, cb.message.message_id, cb.message.text);
+    return;
+  }
+
+  await answerCallbackQuery(cb.id);
+}
+
+async function showLanguageMenu(store: StoreRow, cb: TgCallbackQuery): Promise<void> {
+  const lang = store.owner_lang;
+  const kb: InlineKeyboard = [
+    [
+      { text: "日本語", callback_data: "set_lang:ja" },
+      { text: "ភាសាខ្មែរ", callback_data: "set_lang:km" },
+    ],
+    [
+      { text: "English", callback_data: "set_lang:en" },
+      { text: "中文", callback_data: "set_lang:zh" },
+    ],
+  ];
+  await sendMessage(store.telegram_chat_id!, t(lang, "choose_language"), kb);
+}
+
+async function sendReviewNow(
+  store: StoreRow,
+  reviewId: string,
+  cb: TgCallbackQuery,
+): Promise<void> {
+  const lang = store.owner_lang;
+  const review = await getReview(reviewId);
+  if (!review || !review.draft_reply) {
+    return void answerCallbackQuery(cb.id, t(lang, "error"));
+  }
+  const reviewName = await resolveReviewName(store, review);
+  await replyToReview(store.id, reviewName, review.draft_reply);
+
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("reviews")
+    .update({ status: "replied", replied_at: new Date().toISOString() })
+    .eq("id", reviewId);
+
+  await clearOwnerState(store.id);
+  await answerCallbackQuery(cb.id, t(lang, "sent"));
+  if (cb.message) await stripButtons(cb.message.chat.id, cb.message.message_id, cb.message.text);
+  await sendMessage(store.telegram_chat_id!, t(lang, "sent"));
+}
+
+async function publishNow(
+  store: StoreRow,
+  postId: string,
+  cb: TgCallbackQuery,
+): Promise<void> {
+  const lang = store.owner_lang;
+  try {
+    await publishPost(postId);
+    await answerCallbackQuery(cb.id, t(lang, "published"));
+    if (cb.message) await stripButtons(cb.message.chat.id, cb.message.message_id, cb.message.text);
+    await sendMessage(store.telegram_chat_id!, t(lang, "published"));
+  } catch (err) {
+    console.error("[telegram] publish error", err);
+    await answerCallbackQuery(cb.id, t(lang, "error"));
+  }
+}
+
+/**
+ * reviews.google_review_id には reviewId 末尾のみ保存している場合があるため、
+ * GBP の PUT に必要なフルパスを組み立てる。
+ */
+async function resolveReviewName(store: StoreRow, review: ReviewRow): Promise<string> {
+  if (review.google_review_id.startsWith("accounts/")) return review.google_review_id;
+  const acc = store.google_account_id!.startsWith("accounts/")
+    ? store.google_account_id!
+    : `accounts/${store.google_account_id}`;
+  const loc = store.google_location_id!.startsWith("locations/")
+    ? store.google_location_id!
+    : `locations/${store.google_location_id}`;
+  return `${acc}/${loc}/reviews/${review.google_review_id}`;
+}
+
+/** 押下済みボタンを消す（二重送信防止） */
+async function stripButtons(
+  chatId: number,
+  messageId: number,
+  text?: string,
+): Promise<void> {
+  try {
+    await editMessageText(chatId, messageId, text ?? "✔️");
+  } catch {
+    /* 変更なしエラー等は無視 */
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
