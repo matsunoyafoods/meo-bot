@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 interface StoreView {
   id: string;
   name: string;
+  telegram_chat_id: number | null;
   linked: boolean;
   onboarded: boolean;
   status: "active" | "suspended";
@@ -56,6 +57,9 @@ const STR: Record<Lang, Dict> = {
     confirm_delete: "「{name}」を削除しますか？（口コミ履歴・トークンも削除されます）",
     add_failed: "追加に失敗しました",
     name_untitled: "(名称未設定)",
+    edit_name: "名前を編集",
+    rename_prompt: "新しい店舗名を入力してください",
+    created: "登録日",
   },
   en: {
     title: "MEO Admin",
@@ -91,6 +95,9 @@ const STR: Record<Lang, Dict> = {
     confirm_delete: "Delete \"{name}\"? (reviews & tokens will also be deleted)",
     add_failed: "Failed to add",
     name_untitled: "(untitled)",
+    edit_name: "Edit name",
+    rename_prompt: "Enter a new store name",
+    created: "Created",
   },
   km: {
     title: "ផ្ទាំងគ្រប់គ្រង MEO",
@@ -126,6 +133,9 @@ const STR: Record<Lang, Dict> = {
     confirm_delete: "លុប «{name}» ? (មតិ និង token នឹងត្រូវលុបផងដែរ)",
     add_failed: "បន្ថែមមិនបានសำเร็จ",
     name_untitled: "(គ្មានឈ្មោះ)",
+    edit_name: "កែឈ្មោះ",
+    rename_prompt: "បញ្ចូលឈ្មោះហាងថ្មី",
+    created: "ចុះឈ្មោះ",
   },
   zh: {
     title: "MEO 管理后台",
@@ -161,6 +171,9 @@ const STR: Record<Lang, Dict> = {
     confirm_delete: "删除「{name}」？（评论和令牌也会被删除）",
     add_failed: "添加失败",
     name_untitled: "(未命名)",
+    edit_name: "编辑名称",
+    rename_prompt: "请输入新的店铺名称",
+    created: "创建日期",
   },
 };
 
@@ -264,8 +277,19 @@ export default function AdminPage() {
     }
   }
 
+  async function renameStore(id: string, current: string) {
+    const next = prompt(t("rename_prompt"), current);
+    if (next == null) return;
+    await fetch(`/api/admin/stores/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: next.trim() }),
+    });
+    void load();
+  }
+
   async function removeStore(id: string, label: string) {
-    if (!confirm(t("confirm_delete", { name: label }))) return;
+    if (!confirm(t("confirm_delete", { name: label || t("name_untitled") }))) return;
     await fetch(`/api/admin/stores/${id}`, { method: "DELETE" });
     void load();
   }
@@ -378,7 +402,16 @@ export default function AdminPage() {
           {stores.map((s) => (
             <div key={s.id} style={row}>
               <div style={{ flex: 1, minWidth: 240 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{s.name || t("name_untitled")}</div>
+                <div style={{ fontWeight: 600, fontSize: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span>{s.name || t("name_untitled")}</span>
+                  <button onClick={() => renameStore(s.id, s.name)} style={btnTiny} title={t("edit_name")}>
+                    ✎ {t("edit_name")}
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+                  {s.telegram_chat_id != null && <>Chat ID: {s.telegram_chat_id} ・ </>}
+                  {t("created")}: {new Date(s.created_at).toLocaleDateString()}
+                </div>
                 <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
                   {s.linked ? `🟢 ${t("linked")}` : `⚪ ${t("not_linked")}`} ・{" "}
                   {s.onboarded ? `🔗 ${t("google_linked")}` : `⛔ ${t("google_not")}`} ・{" "}
@@ -449,6 +482,15 @@ const btnSmall: React.CSSProperties = {
   borderRadius: 6,
   cursor: "pointer",
   whiteSpace: "nowrap",
+};
+const btnTiny: React.CSSProperties = {
+  padding: "2px 8px",
+  fontSize: 12,
+  border: "1px solid #ccc",
+  background: "#fff",
+  borderRadius: 6,
+  cursor: "pointer",
+  fontWeight: 400,
 };
 const card: React.CSSProperties = {
   border: "1px solid #e5e5e5",
