@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { PostRow, PostInsert, StoreRow } from "@/lib/supabase/database.types";
 import { generateArticle } from "@/lib/gemini/client";
+import { langLabel } from "@/lib/gemini/prompts";
 import { toStoreContext } from "@/lib/store-context";
 import { createLocalPost } from "@/lib/google/business";
 import { sendMessage } from "@/lib/telegram/client";
@@ -39,8 +40,13 @@ export async function proposeArticle(store: StoreRow, theme: string): Promise<vo
 
   const supabase = createSupabaseAdminClient();
   const ctx = toStoreContext(store);
+  const lang = store.owner_lang;
 
-  const { topic, body_km, body_en } = await generateArticle(ctx, theme);
+  const { topic, body_km, body_en, body_owner } = await generateArticle(
+    ctx,
+    theme,
+    lang,
+  );
 
   const insert: PostInsert = {
     store_id: store.id,
@@ -58,11 +64,18 @@ export async function proposeArticle(store: StoreRow, theme: string): Promise<vo
     .single<PostRow>();
   if (error || !post) throw new Error(`insert post failed: ${error?.message}`);
 
-  const lang = store.owner_lang;
+  // オーナー母国語版（ja/km/en/zh）を先頭に表示。ただし公開言語(km/en)と
+  // 重複する場合は省く。
+  const ownerBlock =
+    body_owner && lang !== "km" && lang !== "en"
+      ? [`<b>${langLabel(lang)}:</b>`, escapeHtml(body_owner), ""]
+      : [];
+
   const text = [
     `<b>${t(lang, "article_title")}</b>`,
     `<i>${escapeHtml(topic)}</i>`,
     "",
+    ...ownerBlock,
     "<b>ភាសាខ្មែរ (Khmer):</b>",
     escapeHtml(body_km),
     "",

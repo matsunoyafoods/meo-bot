@@ -81,12 +81,21 @@ export async function translateOwnerEditToReply(
   return reply;
 }
 
-/* ---------- ④ 日常記事（km/en） ---------- */
+/* ---------- ④ 日常記事（km/en + オーナー母国語） ---------- */
 export function generateArticle(
   store: StoreContext,
   theme: string,
-): Promise<{ topic: string; body_km: string; body_en: string }> {
-  return generateJson(articleSystemPrompt(store), articleUserPrompt(theme));
+  ownerLang: string,
+): Promise<{
+  topic: string;
+  body_km: string;
+  body_en: string;
+  body_owner: string;
+}> {
+  return generateJson(
+    articleSystemPrompt(store, ownerLang),
+    articleUserPrompt(theme),
+  );
 }
 
 /* ---------- ⑤ 週報KPI要約 ---------- */

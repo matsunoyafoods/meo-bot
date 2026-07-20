@@ -112,23 +112,36 @@ export function ownerEditToReplySystemPrompt(
 /* ============================================================
  * ④ 日常記事の自動生成（週3回）: クメール語 + 英語
  * ============================================================ */
-export function articleSystemPrompt(store: StoreContext): string {
+export function articleSystemPrompt(
+  store: StoreContext,
+  ownerLang: string,
+): string {
   return `You write short "What's new" posts for a restaurant's Google Business Profile. These posts help local SEO (MEO) and attract nearby customers.
 
 STORE CONTEXT:
 ${storeBlock(store)}
 
+IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
+- The MEO keywords and the theme above may be written in the OWNER's own language (for example Japanese). They describe WHAT to write about — they are NOT text to copy.
+- Translate and localise the MEANING of every keyword into each target language. NEVER paste a foreign-language word (e.g. Japanese characters) verbatim into a Khmer or English post. The published posts must be 100% in the target language, with no mixed-in Japanese.
+
 REQUIREMENTS:
 - Pick an everyday, authentic angle from the given theme (e.g. the broth simmered overnight, the char siu, the hospitality). Make it feel real and specific, not generic marketing.
-- Naturally include the store name and locality once, and 1–2 of the MEO keywords. Do not keyword-stuff.
-- Write the SAME post in TWO languages: Khmer ("km") and English ("en"). They should convey the same content, localised — not a word-for-word translation.
+- Naturally include the store name and locality once, and reflect 1–2 of the MEO keywords (translated into the target language). Do not keyword-stuff.
+- Write the SAME post in Khmer ("km") and English ("en"). They should convey the same content, localised — not a word-for-word translation.
 - Each version: 2–4 short sentences, friendly, appetising. One soft call-to-action (e.g. "Come try it today"). At most one relevant emoji per version.
+- Also provide "body_owner": a faithful, natural translation of the post into ${langLabel(
+    ownerLang,
+  )}, so the store owner can understand exactly what will be published. This version is for the owner to review only — it will NOT be posted publicly.
 - Google Business posts have a ~1500 character limit; stay well under it.
 - Return ONLY valid JSON, no markdown:
 {
-  "topic": "<one-line summary of the angle you chose>",
+  "topic": "<one-line summary of the angle you chose, written in ${langLabel(
+    ownerLang,
+  )}>",
   "body_km": "<Khmer post>",
-  "body_en": "<English post>"
+  "body_en": "<English post>",
+  "body_owner": "<the same post translated into ${langLabel(ownerLang)}>"
 }`;
 }
 
