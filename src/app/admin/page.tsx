@@ -12,6 +12,8 @@ interface StoreView {
   owner_lang: string;
   avg_ticket_amount: number;
   avg_ticket_currency: string;
+  category: string | null;
+  keywords: string | null;
   trial_ends_at: string | null;
   trial_days_left: number | null;
   invite_url: string | null;
@@ -36,7 +38,7 @@ const STR: Record<Lang, Dict> = {
     days: "日",
     add_btn: "追加して招待リンク発行",
     add_help:
-      "追加すると招待リンクが発行されます。下の一覧からリンクをコピーして、店舗オーナーに Telegram で転送してください。オーナーがリンクを開いて「開始」を押すと、その店舗に紐づきます。",
+      "追加すると招待リンクが発行されます。下の一覧からリンクをコピーして、店舗オーナーに Telegram で転送してください。オーナーがリンクを開いて「開始」を押すと、その店舗に紐づき、初期設定（言語・ジャンル・キーワード・客単価）を自分で行えます。",
     store_list: "店舗一覧",
     no_stores: "まだ店舗がありません。",
     linked: "Telegram紐づけ済",
@@ -44,6 +46,8 @@ const STR: Record<Lang, Dict> = {
     google_linked: "Google連携済",
     google_not: "Google未連携",
     avg_ticket: "客単価",
+    category: "ジャンル・商品",
+    keywords: "キーワード",
     free_period: "無料期間",
     until: "まで",
     days_left: "残り {n} 日",
@@ -59,6 +63,10 @@ const STR: Record<Lang, Dict> = {
     name_untitled: "(名称未設定)",
     edit_name: "名前を編集",
     rename_prompt: "新しい店舗名を入力してください",
+    edit_category: "ジャンルを編集",
+    category_prompt: "店舗のジャンル・主な商品を入力（例: ラーメン店 / カフェ / 焼肉）",
+    edit_keywords: "キーワードを編集",
+    keywords_prompt: "MEOキーワードを入力（カンマ区切り。例: 味噌ラーメン, 餃子, プノンペン）",
     created: "登録日",
   },
   en: {
@@ -74,7 +82,7 @@ const STR: Record<Lang, Dict> = {
     days: "days",
     add_btn: "Add & create invite link",
     add_help:
-      "Adding a store creates an invite link. Copy it from the list and forward it to the store owner on Telegram. When they open the link and press Start, their chat is linked to that store.",
+      "Adding a store creates an invite link. Copy it from the list and forward it to the store owner on Telegram. When they open the link and press Start, their chat links to that store and they can set it up themselves (language, genre, keywords, average ticket).",
     store_list: "Stores",
     no_stores: "No stores yet.",
     linked: "Telegram linked",
@@ -82,6 +90,8 @@ const STR: Record<Lang, Dict> = {
     google_linked: "Google connected",
     google_not: "Google not connected",
     avg_ticket: "Avg ticket",
+    category: "Genre / products",
+    keywords: "Keywords",
     free_period: "Free trial",
     until: "until",
     days_left: "{n} days left",
@@ -97,6 +107,10 @@ const STR: Record<Lang, Dict> = {
     name_untitled: "(untitled)",
     edit_name: "Edit name",
     rename_prompt: "Enter a new store name",
+    edit_category: "Edit genre",
+    category_prompt: "Enter store genre / main products (e.g. ramen shop / cafe / BBQ)",
+    edit_keywords: "Edit keywords",
+    keywords_prompt: "Enter MEO keywords (comma-separated, e.g. miso ramen, gyoza, Phnom Penh)",
     created: "Created",
   },
   km: {
@@ -112,7 +126,7 @@ const STR: Record<Lang, Dict> = {
     days: "ថ្ងៃ",
     add_btn: "បន្ថែម & បង្កើតតំណអញ្ជើញ",
     add_help:
-      "ការបន្ថែមហាងនឹងបង្កើតតំណអញ្ជើញ។ ចម្លងវាពីបញ្ជី ហើយបញ្ជូនទៅម្ចាស់ហាងតាម Telegram។ ពេលគាត់បើកតំណ ហើយចុច Start ការជជែករបស់គាត់នឹងភ្ជាប់ទៅហាងនោះ។",
+      "ការបន្ថែមហាងនឹងបង្កើតតំណអញ្ជើញ។ ចម្លងវាពីបញ្ជី ហើយបញ្ជូនទៅម្ចាស់ហាងតាម Telegram។ ពេលគាត់បើកតំណ ហើយចុច Start ការជជែកនឹងភ្ជាប់ទៅហាង ហើយគាត់អាចកំណត់ដោយខ្លួនឯង (ភាសា ប្រភេទ ពាក្យគន្លឹះ តម្លៃមធ្យម)។",
     store_list: "បញ្ជីហាង",
     no_stores: "មិនទាន់មានហាងទេ។",
     linked: "ភ្ជាប់ Telegram រួច",
@@ -120,6 +134,8 @@ const STR: Record<Lang, Dict> = {
     google_linked: "ភ្ជាប់ Google រួច",
     google_not: "មិនទាន់ភ្ជាប់ Google",
     avg_ticket: "តម្លៃមធ្យម",
+    category: "ប្រភេទ/ផលិតផល",
+    keywords: "ពាក្យគន្លឹះ",
     free_period: "រយៈពេលឥតគិតថ្លៃ",
     until: "រហូតដល់",
     days_left: "នៅសល់ {n} ថ្ងៃ",
@@ -135,6 +151,10 @@ const STR: Record<Lang, Dict> = {
     name_untitled: "(គ្មានឈ្មោះ)",
     edit_name: "កែឈ្មោះ",
     rename_prompt: "បញ្ចូលឈ្មោះហាងថ្មី",
+    edit_category: "កែប្រភេទ",
+    category_prompt: "បញ្ចូលប្រភេទ/ផលិតផលហាង (ឧ. ហាងរ៉ាមេន / កាហ្វេ / សាច់អាំង)",
+    edit_keywords: "កែពាក្យគន្លឹះ",
+    keywords_prompt: "បញ្ចូលពាក្យគន្លឹះ MEO (បំបែកដោយក្បៀស ឧ. រ៉ាមេនមីសូ, គ្យូហ្សា, ភ្នំពេញ)",
     created: "ចុះឈ្មោះ",
   },
   zh: {
@@ -150,7 +170,7 @@ const STR: Record<Lang, Dict> = {
     days: "天",
     add_btn: "添加并生成邀请链接",
     add_help:
-      "添加店铺会生成邀请链接。请从下方列表复制链接，通过 Telegram 转发给店主。店主打开链接并点击「开始」后，其对话即绑定到该店铺。",
+      "添加店铺会生成邀请链接。请从下方列表复制链接，通过 Telegram 转发给店主。店主打开链接并点击「开始」后，其对话即绑定到该店铺，并可自行设置（语言、类别、关键词、客单价）。",
     store_list: "店铺列表",
     no_stores: "还没有店铺。",
     linked: "已绑定 Telegram",
@@ -158,6 +178,8 @@ const STR: Record<Lang, Dict> = {
     google_linked: "已连接 Google",
     google_not: "未连接 Google",
     avg_ticket: "客单价",
+    category: "类别/商品",
+    keywords: "关键词",
     free_period: "免费期",
     until: "至",
     days_left: "剩余 {n} 天",
@@ -173,6 +195,10 @@ const STR: Record<Lang, Dict> = {
     name_untitled: "(未命名)",
     edit_name: "编辑名称",
     rename_prompt: "请输入新的店铺名称",
+    edit_category: "编辑类别",
+    category_prompt: "请输入店铺类别/主要商品（例：拉面店 / 咖啡馆 / 烧烤）",
+    edit_keywords: "编辑关键词",
+    keywords_prompt: "请输入 MEO 关键词（逗号分隔，例：味噌拉面, 饺子, 金边）",
     created: "创建日期",
   },
 };
@@ -277,15 +303,19 @@ export default function AdminPage() {
     }
   }
 
-  async function renameStore(id: string, current: string) {
-    const next = prompt(t("rename_prompt"), current);
-    if (next == null) return;
+  async function patchStore(id: string, patch: Record<string, unknown>) {
     await fetch(`/api/admin/stores/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: next.trim() }),
+      body: JSON.stringify(patch),
     });
     void load();
+  }
+
+  function editField(id: string, field: string, promptKey: string, current: string | null) {
+    const next = prompt(t(promptKey), current ?? "");
+    if (next == null) return;
+    void patchStore(id, { [field]: next.trim() });
   }
 
   async function removeStore(id: string, label: string) {
@@ -294,14 +324,9 @@ export default function AdminPage() {
     void load();
   }
 
-  async function extendTrial(id: string, days: number) {
+  function extendTrial(id: string, days: number) {
     const until = new Date(Date.now() + days * 86_400_000).toISOString();
-    await fetch(`/api/admin/stores/${id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ trial_ends_at: until }),
-    });
-    void load();
+    void patchStore(id, { trial_ends_at: until });
   }
 
   function copyLink(text: string) {
@@ -404,7 +429,7 @@ export default function AdminPage() {
               <div style={{ flex: 1, minWidth: 240 }}>
                 <div style={{ fontWeight: 600, fontSize: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span>{s.name || t("name_untitled")}</span>
-                  <button onClick={() => renameStore(s.id, s.name)} style={btnTiny} title={t("edit_name")}>
+                  <button onClick={() => editField(s.id, "name", "rename_prompt", s.name)} style={btnTiny}>
                     ✎ {t("edit_name")}
                   </button>
                 </div>
@@ -416,6 +441,22 @@ export default function AdminPage() {
                   {s.linked ? `🟢 ${t("linked")}` : `⚪ ${t("not_linked")}`} ・{" "}
                   {s.onboarded ? `🔗 ${t("google_linked")}` : `⛔ ${t("google_not")}`} ・{" "}
                   {t("avg_ticket")} {s.avg_ticket_amount} {s.avg_ticket_currency}
+                </div>
+                <div style={{ fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span>
+                    {t("category")}: <b>{s.category || t("not_set")}</b>
+                  </span>
+                  <button onClick={() => editField(s.id, "category", "category_prompt", s.category)} style={btnTiny}>
+                    ✎
+                  </button>
+                </div>
+                <div style={{ fontSize: 13, marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span>
+                    {t("keywords")}: <b>{s.keywords || t("not_set")}</b>
+                  </span>
+                  <button onClick={() => editField(s.id, "keywords", "keywords_prompt", s.keywords)} style={btnTiny}>
+                    ✎
+                  </button>
                 </div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>
                   {t("free_period")}:{" "}

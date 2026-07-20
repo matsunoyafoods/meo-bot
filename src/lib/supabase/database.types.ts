@@ -17,6 +17,9 @@ export type PostStatus = "draft" | "published" | "skipped";
 export type OwnerStateMode =
   | "awaiting_review_edit"
   | "awaiting_ticket_amount"
+  | "awaiting_post_keyword"
+  | "awaiting_category"
+  | "awaiting_keywords"
   | null;
 
 export interface StoreRow {
@@ -32,6 +35,8 @@ export interface StoreRow {
   trial_ends_at: string | null;
   invite_token: string | null;
   status: "active" | "suspended";
+  category: string | null;
+  keywords: string | null;
   created_at: string;
   updated_at: string;
 }

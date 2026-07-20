@@ -13,6 +13,8 @@ export interface AdminStoreView {
   owner_lang: OwnerLang;
   avg_ticket_amount: number;
   avg_ticket_currency: string;
+  category: string | null;
+  keywords: string | null;
   trial_ends_at: string | null;
   trial_days_left: number | null;
   invite_token: string | null;
@@ -37,6 +39,8 @@ async function toView(row: StoreRow, botUsername: string): Promise<AdminStoreVie
     owner_lang: row.owner_lang,
     avg_ticket_amount: Number(row.avg_ticket_amount),
     avg_ticket_currency: row.avg_ticket_currency,
+    category: row.category,
+    keywords: row.keywords,
     trial_ends_at: row.trial_ends_at,
     trial_days_left: daysLeft(row.trial_ends_at),
     invite_token: row.invite_token,
@@ -110,6 +114,8 @@ export async function updateStoreForAdmin(
     name?: string;
     trial_ends_at?: string | null;
     status?: "active" | "suspended";
+    category?: string | null;
+    keywords?: string | null;
   },
 ): Promise<void> {
   const supabase = createSupabaseAdminClient();

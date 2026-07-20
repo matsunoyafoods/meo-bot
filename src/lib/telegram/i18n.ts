@@ -15,6 +15,16 @@ const ja: Dict = {
   settings_title: "⚙️ 店舗設定",
   set_language: "🌐 母国語を設定",
   set_ticket: "💵 客単価を設定",
+  set_category: "🍜 ジャンル・商品を設定",
+  set_keywords: "🔑 キーワードを設定",
+  ask_category:
+    "店舗のジャンル・主な商品を入力してください（例: ラーメン店、カフェ、焼肉店、タイ料理）。投稿文の生成に使います。",
+  ask_keywords:
+    "投稿で使いたいキーワードを入力してください（カンマ区切り。例: 味噌ラーメン, 餃子, プノンペン, ランチ）。",
+  category_saved: "✅ ジャンル・商品を「{v}」に設定しました。",
+  keywords_saved: "✅ キーワードを設定しました。",
+  setup_prompt:
+    "はじめに初期設定をしましょう。下のボタンから、母国語・ジャンル・キーワード・客単価を設定できます（後で /settings でも変更できます）。",
   choose_language: "通知・翻訳に使う母国語を選んでください。",
   lang_saved: "✅ 母国語を「{lang}」に設定しました。",
   ask_ticket:
@@ -38,6 +48,8 @@ const ja: Dict = {
   published: "✅ Googleビジネスプロフィールに投稿しました。",
   not_connected: "先にGoogleと連携してください。/start を押してください。",
   error: "⚠️ エラーが発生しました。時間をおいて再度お試しください。",
+  ask_post_keyword:
+    "投稿したい内容やキーワードを入力してください（例: 金曜限定 辛味噌ラーメン 20%OFF、週末イベント）。AIが投稿文を作成します。",
 };
 
 const en: Dict = {
@@ -49,6 +61,16 @@ const en: Dict = {
   settings_title: "⚙️ Store settings",
   set_language: "🌐 Set your language",
   set_ticket: "💵 Set average ticket",
+  set_category: "🍜 Set genre / products",
+  set_keywords: "🔑 Set keywords",
+  ask_category:
+    "Enter your store's genre / main products (e.g. ramen shop, cafe, BBQ, Thai food). Used to generate posts.",
+  ask_keywords:
+    "Enter keywords to use in posts (comma-separated, e.g. miso ramen, gyoza, Phnom Penh, lunch).",
+  category_saved: "✅ Genre / products set to \"{v}\".",
+  keywords_saved: "✅ Keywords saved.",
+  setup_prompt:
+    "Let's set things up first. Use the buttons below to set your language, genre, keywords and average ticket (you can change them later with /settings).",
   choose_language: "Choose the language for notifications and translations.",
   lang_saved: "✅ Language set to \"{lang}\".",
   ask_ticket: "Send your average ticket as \"amount currency\". e.g. 10 USD / 40000 KHR",
@@ -71,6 +93,8 @@ const en: Dict = {
   published: "✅ Published to your Google Business Profile.",
   not_connected: "Please connect Google first. Tap /start.",
   error: "⚠️ Something went wrong. Please try again later.",
+  ask_post_keyword:
+    "Type the content or keywords you want to post (e.g. Friday-only spicy miso ramen 20% off, weekend event). The AI will write the post.",
 };
 
 const km: Dict = {
@@ -82,6 +106,16 @@ const km: Dict = {
   settings_title: "⚙️ ការកំណត់ហាង",
   set_language: "🌐 កំណត់ភាសា",
   set_ticket: "💵 កំណត់តម្លៃមធ្យម",
+  set_category: "🍜 កំណត់ប្រភេទ/ផលិតផល",
+  set_keywords: "🔑 កំណត់ពាក្យគន្លឹះ",
+  ask_category:
+    "សូមបញ្ចូលប្រភេទហាង/ផលិតផលសំខាន់ (ឧ. ហាងរ៉ាមេន, ហាងកាហ្វេ, សាច់អាំង, ម្ហូបថៃ)។ ប្រើសម្រាប់បង្កើតអត្ថបទ។",
+  ask_keywords:
+    "សូមបញ្ចូលពាក្យគន្លឹះសម្រាប់ការបង្ហោះ (បំបែកដោយសញ្ញាក្បៀស ឧ. រ៉ាមេនមីសូ, គ្យូហ្សា, ភ្នំពេញ, អាហារថ្ងៃត្រង់)។",
+  category_saved: "✅ បានកំណត់ប្រភេទ/ផលិតផលទៅ «{v}»។",
+  keywords_saved: "✅ បានរក្សាទុកពាក្យគន្លឹះ។",
+  setup_prompt:
+    "ដំបូងសូមកំណត់ការកំណត់។ ប្រើប៊ូតុងខាងក្រោមដើម្បីកំណត់ភាសា ប្រភេទ ពាក្យគន្លឹះ និងតម្លៃមធ្យម (អាចផ្លាស់ប្តូរពេលក្រោយដោយ /settings)។",
   choose_language: "ជ្រើសរើសភាសាសម្រាប់ការជូនដំណឹង និងការបកប្រែ។",
   lang_saved: "✅ បានកំណត់ភាសាទៅ «{lang}»។",
   ask_ticket: "ផ្ញើតម្លៃមធ្យមជា «ចំនួន រូបិយប័ណ្ណ»។ ឧ. 10 USD / 40000 KHR",
@@ -104,6 +138,8 @@ const km: Dict = {
   published: "✅ បានបង្ហោះទៅ Google Business Profile។",
   not_connected: "សូមភ្ជាប់ Google ជាមុនសិន។ ចុច /start។",
   error: "⚠️ មានបញ្ហា។ សូមព្យាយាមម្តងទៀត។",
+  ask_post_keyword:
+    "សូមបញ្ចូលខ្លឹមសារ ឬពាក្យគន្លឹះដែលអ្នកចង់បង្ហោះ (ឧ. រ៉ាមេនម្សៅហឹរ តែថ្ងៃសុក្រ បញ្ចុះ 20%, ព្រឹត្តិការណ៍ចុងសប្តាហ៍)។ AI នឹងសរសេរអត្ថបទ។",
 };
 
 const zh: Dict = {
@@ -115,6 +151,16 @@ const zh: Dict = {
   settings_title: "⚙️ 店铺设置",
   set_language: "🌐 设置语言",
   set_ticket: "💵 设置客单价",
+  set_category: "🍜 设置类别/商品",
+  set_keywords: "🔑 设置关键词",
+  ask_category:
+    "请输入店铺类别/主要商品（例：拉面店、咖啡馆、烧烤、泰国菜）。用于生成帖文。",
+  ask_keywords:
+    "请输入用于帖文的关键词（用逗号分隔，例：味噌拉面, 饺子, 金边, 午餐）。",
+  category_saved: "✅ 类别/商品已设置为「{v}」。",
+  keywords_saved: "✅ 关键词已保存。",
+  setup_prompt:
+    "先来做初始设置吧。用下方按钮设置语言、类别、关键词和客单价（之后可用 /settings 修改）。",
   choose_language: "请选择用于通知和翻译的语言。",
   lang_saved: "✅ 语言已设置为「{lang}」。",
   ask_ticket: "请以「金额 货币」发送客单价。例如：10 USD / 40000 KHR",
@@ -136,6 +182,8 @@ const zh: Dict = {
   published: "✅ 已发布到您的 Google 商家资料。",
   not_connected: "请先连接 Google。点击 /start。",
   error: "⚠️ 出现错误，请稍后再试。",
+  ask_post_keyword:
+    "请输入您想发布的内容或关键词（例：仅限周五的辣味噌拉面 20% 折扣、周末活动）。AI 将撰写帖文。",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };

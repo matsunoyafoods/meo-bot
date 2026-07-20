@@ -26,7 +26,7 @@ import { bindStoreByInvite } from "@/lib/admin-stores";
 import { replyToReview } from "@/lib/google/business";
 import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
-import { publishPost } from "@/lib/workflows/article";
+import { publishPost, proposeArticle } from "@/lib/workflows/article";
 
 /** webhook のエントリーポイント */
 export async function handleUpdate(update: TgUpdate): Promise<void> {
@@ -50,8 +50,9 @@ async function handleMessage(msg: TgMessage): Promise<void> {
 
   if (text.startsWith("/start")) return cmdStart(chatId, text);
   if (text.startsWith("/settings")) return cmdSettings(chatId);
+  if (text.startsWith("/post")) return cmdPost(chatId);
 
-  // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力）
+  // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
   if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
 
@@ -62,6 +63,15 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (state?.mode === "awaiting_ticket_amount") {
     return handleTicketText(store, text);
   }
+  if (state?.mode === "awaiting_post_keyword") {
+    return handlePostKeywordText(store, text);
+  }
+  if (state?.mode === "awaiting_category") {
+    return handleCategoryText(store, text);
+  }
+  if (state?.mode === "awaiting_keywords") {
+    return handleKeywordsText(store, text);
+  }
   // 状態が無ければ軽くヘルプ
   await sendMessage(chatId, t(store.owner_lang, "settings_title"));
 }
@@ -71,9 +81,11 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   // "/start invite_<token>" のディープリンクを解釈
   const param = text.split(/\s+/)[1] ?? "";
   let store = null as Awaited<ReturnType<typeof ensureStoreForChat>> | null;
+  let viaInvite = false;
   if (param.startsWith("invite_")) {
     const inviteToken = param.slice("invite_".length);
     store = await bindStoreByInvite(chatId, inviteToken);
+    viaInvite = store != null;
   }
   // 招待が無効/未指定なら通常フロー（chat に紐づく店舗を用意）
   if (!store) store = await ensureStoreForChat(chatId);
@@ -88,6 +100,11 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   await sendMessage(chatId, t(lang, "welcome"), [
     [{ text: t(lang, "connect_google"), url }],
   ]);
+
+  // 招待リンク経由の初回は、続けて初期設定メニューを表示
+  if (viaInvite) {
+    await sendSettingsMenu(chatId, lang, t(lang, "setup_prompt"));
+  }
 }
 
 /* ---------- /settings : インラインメニュー ---------- */
@@ -95,10 +112,53 @@ async function cmdSettings(chatId: number): Promise<void> {
   const store = await getStoreByChatId(chatId);
   if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
   const lang = store.owner_lang;
-  await sendMessage(chatId, t(lang, "settings_title"), [
+  await sendSettingsMenu(store.telegram_chat_id ?? chatId, lang);
+}
+
+/** 設定メニュー（言語・ジャンル・キーワード・客単価） */
+async function sendSettingsMenu(chatId: number, lang: OwnerLang, header?: string): Promise<void> {
+  await sendMessage(chatId, header ?? t(lang, "settings_title"), [
     [{ text: t(lang, "set_language"), callback_data: "set_lang_menu" }],
+    [{ text: t(lang, "set_category"), callback_data: "set_category" }],
+    [{ text: t(lang, "set_keywords"), callback_data: "set_keywords" }],
     [{ text: t(lang, "set_ticket"), callback_data: "set_ticket" }],
   ]);
+}
+
+/* ---------- /post : キーワード指定のオンデマンド投稿 ---------- */
+async function cmdPost(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  await setOwnerState(store.id, "awaiting_post_keyword", {});
+  await sendMessage(chatId, t(store.owner_lang, "ask_post_keyword"));
+}
+
+/** オーナーが入力したキーワード/内容から投稿下書きを生成して送る */
+async function handlePostKeywordText(store: StoreRow, text: string): Promise<void> {
+  await clearOwnerState(store.id);
+  if (!text.trim()) return;
+  try {
+    // 入力内容をテーマとして記事を生成 → 下書き＋投稿ボタンが届く
+    await proposeArticle(store, text.trim());
+  } catch (e) {
+    console.error("[telegram] custom post error", e);
+    await sendMessage(store.telegram_chat_id!, t(store.owner_lang, "error"));
+  }
+}
+
+/* ---------- ジャンル・キーワード テキスト入力 ---------- */
+async function handleCategoryText(store: StoreRow, text: string): Promise<void> {
+  const lang = store.owner_lang;
+  await updateStore(store.id, { category: text.trim() });
+  await clearOwnerState(store.id);
+  await sendMessage(store.telegram_chat_id!, t(lang, "category_saved", { v: text.trim() }));
+}
+
+async function handleKeywordsText(store: StoreRow, text: string): Promise<void> {
+  const lang = store.owner_lang;
+  await updateStore(store.id, { keywords: text.trim() });
+  await clearOwnerState(store.id);
+  await sendMessage(store.telegram_chat_id!, t(lang, "keywords_saved"));
 }
 
 /* ---------- 客単価テキスト入力 ---------- */
@@ -197,6 +257,16 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     await setOwnerState(store.id, "awaiting_ticket_amount", {});
     await answerCallbackQuery(cb.id);
     return void sendMessage(chatId, t(store.owner_lang, "ask_ticket"));
+  }
+  if (data === "set_category") {
+    await setOwnerState(store.id, "awaiting_category", {});
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(store.owner_lang, "ask_category"));
+  }
+  if (data === "set_keywords") {
+    await setOwnerState(store.id, "awaiting_keywords", {});
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(store.owner_lang, "ask_keywords"));
   }
 
   // --- 口コミ: 送信 / 編集 ---

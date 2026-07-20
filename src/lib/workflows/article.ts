@@ -21,16 +21,24 @@ function pickTheme(seed: number): string {
 }
 
 /**
- * 機能④: 週3回、記事下書きを生成して Telegram に送る。
+ * 機能④: 週3回、記事下書きを生成して Telegram に送る（テーマは自動ローテーション）。
  */
 export async function generateAndProposeArticle(store: StoreRow): Promise<void> {
+  const dayOfYear = Math.floor(Date.now() / 86_400_000);
+  await proposeArticle(store, pickTheme(dayOfYear));
+}
+
+/**
+ * 指定テーマ/キーワードで記事下書きを生成して Telegram に送る（共通処理）。
+ * - 定期投稿（ローテーションテーマ）
+ * - オンデマンド投稿（オーナーが入力したキーワード）
+ * の両方で使う。
+ */
+export async function proposeArticle(store: StoreRow, theme: string): Promise<void> {
   if (!store.telegram_chat_id) return;
 
   const supabase = createSupabaseAdminClient();
   const ctx = toStoreContext(store);
-
-  const dayOfYear = Math.floor(Date.now() / 86_400_000);
-  const theme = pickTheme(dayOfYear);
 
   const { topic, body_km, body_en } = await generateArticle(ctx, theme);
 

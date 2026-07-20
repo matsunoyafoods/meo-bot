@@ -3,13 +3,20 @@ import type { StoreContext } from "@/lib/gemini/prompts";
 
 /**
  * StoreRow → Gemini 用 StoreContext。
- * PoC ではエリアを固定。将来は stores に area/category/keywords 列を足すとよい。
+ * 店舗ごとの category / keywords を反映（未設定なら汎用フォールバック）。
  */
 export function toStoreContext(store: StoreRow): StoreContext {
+  const kw = (store.keywords ?? "")
+    .split(/[,、\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const keywords = [store.name, ...kw].filter(Boolean);
+
   return {
     name: store.name || "our restaurant",
     area: "Phnom Penh, Cambodia",
-    category: "ramen / Japanese restaurant",
-    keywords: [store.name, "Phnom Penh", "ramen", "Japanese food"].filter(Boolean),
+    category: store.category || "restaurant",
+    keywords: keywords.length ? keywords : [store.name || "our restaurant", "Phnom Penh"],
   };
 }
