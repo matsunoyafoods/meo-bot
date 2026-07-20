@@ -33,11 +33,22 @@ export async function GET(req: Request): Promise<NextResponse> {
   const chatId = st.telegram_chat_id;
   const store = await ensureStoreForChat(chatId);
 
+  // 1) トークン交換 + 保存（必須。ここが失敗したら本当のエラー）
   try {
-    // 1) トークン交換 + 保存
     await exchangeCodeAndStore(code, store.id);
+  } catch (e) {
+    console.error("[oauth] token exchange error", e);
+    return html("連携処理でエラーが発生しました。時間をおいて /start からやり直してください。");
+  }
 
-    // 2) アカウント/ロケーションを取得して先頭を紐づけ（PoC）
+  // 使い終わった state は削除（トークンは保存済みなので、この先で失敗しても再連携は /start から可）
+  await supabase.from("oauth_states").delete().eq("state", state);
+
+  // 2) アカウント/ロケーション取得（Google Business Profile API の割り当てが必要）
+  //    quota 未承認だと 429/403 になる。その場合でもトークンは保存済みなので
+  //    「ログイン完了・店舗接続は承認後」として成功扱いにする（承認後に再連携で店舗が付く）。
+  let locationLinked = false;
+  try {
     const accounts = await listAccounts(store.id);
     const account = accounts[0];
     let locationName: string | null = null;
@@ -50,26 +61,40 @@ export async function GET(req: Request): Promise<NextResponse> {
         storeName = loc.title ?? storeName;
       }
     }
-
-    const patch: Partial<StoreRow> = {
-      google_account_id: account?.name ?? null,
-      google_location_id: locationName,
-      name: storeName || store.name,
-      onboarded: Boolean(account && locationName),
-    };
-    await supabase.from("stores").update(patch).eq("id", store.id);
-
-    // 3) 使い終わった state を削除
-    await supabase.from("oauth_states").delete().eq("state", state);
-
-    // 4) Telegram に完了通知
-    await sendMessage(chatId, t(store.owner_lang, "connected"));
-
-    return html("✅ 連携が完了しました。Telegramに戻ってください。");
+    if (account && locationName) {
+      const patch: Partial<StoreRow> = {
+        google_account_id: account.name,
+        google_location_id: locationName,
+        name: storeName || store.name,
+        onboarded: true,
+      };
+      await supabase.from("stores").update(patch).eq("id", store.id);
+      locationLinked = true;
+    }
   } catch (e) {
-    console.error("[oauth] callback error", e);
-    return html("連携処理でエラーが発生しました。時間をおいて /start からやり直してください。");
+    console.warn(
+      "[oauth] listAccounts/listLocations skipped (likely GBP quota not granted yet)",
+      e,
+    );
   }
+
+  // 3) Telegram 通知
+  try {
+    await sendMessage(
+      chatId,
+      locationLinked
+        ? t(store.owner_lang, "connected")
+        : "✅ Googleログインが完了しました。\n店舗データの接続は、Google Business Profile API の利用が承認され次第、自動で有効になります（現在は申請/審査待ちの状態です）。",
+    );
+  } catch (e) {
+    console.error("[oauth] telegram notify error", e);
+  }
+
+  return html(
+    locationLinked
+      ? "✅ 連携が完了しました。Telegramに戻ってください。"
+      : "✅ Googleログイン完了。店舗接続はAPI利用承認後に有効になります。Telegramに戻ってください。",
+  );
 }
 
 function html(message: string): NextResponse {
