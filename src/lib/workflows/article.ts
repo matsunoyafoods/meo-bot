@@ -1,6 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { PostRow, PostInsert, StoreRow } from "@/lib/supabase/database.types";
-import { generateArticle } from "@/lib/gemini/client";
+import { generateArticle, reviseArticle } from "@/lib/gemini/client";
 import { langLabel } from "@/lib/gemini/prompts";
 import { toStoreContext } from "@/lib/store-context";
 import { createLocalPost } from "@/lib/google/business";
@@ -64,28 +64,75 @@ export async function proposeArticle(store: StoreRow, theme: string): Promise<vo
     .single<PostRow>();
   if (error || !post) throw new Error(`insert post failed: ${error?.message}`);
 
+  await sendPostDraft(store, post, body_owner);
+}
+
+/**
+ * ④-b: オーナーの編集指示で既存の下書きを作り直し、再度確認を送る。
+ */
+export async function reviseArticlePost(
+  store: StoreRow,
+  postId: string,
+  instruction: string,
+): Promise<void> {
+  if (!store.telegram_chat_id) return;
+  const supabase = createSupabaseAdminClient();
+  const { data: post } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("id", postId)
+    .single<PostRow>();
+  if (!post) throw new Error(`post ${postId} not found`);
+
+  const ctx = toStoreContext(store);
+  const { topic, body_km, body_en, body_owner } = await reviseArticle(
+    ctx,
+    { currentKm: post.body_km, currentEn: post.body_en, instruction },
+    store.owner_lang,
+  );
+
+  const { data: updated } = await supabase
+    .from("posts")
+    .update({ topic, body_km, body_en, status: "draft" })
+    .eq("id", postId)
+    .select("*")
+    .single<PostRow>();
+
+  await sendPostDraft(store, updated ?? post, body_owner);
+}
+
+/** 下書き本文（母国語＋km＋en）＋確認ボタンを Telegram に送る共通処理 */
+async function sendPostDraft(
+  store: StoreRow,
+  post: PostRow,
+  bodyOwner: string,
+): Promise<void> {
+  if (!store.telegram_chat_id) return;
+  const lang = store.owner_lang;
+
   // オーナー母国語版（ja/km/en/zh）を先頭に表示。ただし公開言語(km/en)と
   // 重複する場合は省く。
   const ownerBlock =
-    body_owner && lang !== "km" && lang !== "en"
-      ? [`<b>${langLabel(lang)}:</b>`, escapeHtml(body_owner), ""]
+    bodyOwner && lang !== "km" && lang !== "en"
+      ? [`<b>${langLabel(lang)}:</b>`, escapeHtml(bodyOwner), ""]
       : [];
 
   const text = [
     `<b>${t(lang, "article_title")}</b>`,
-    `<i>${escapeHtml(topic)}</i>`,
+    `<i>${escapeHtml(post.topic ?? "")}</i>`,
     "",
     ...ownerBlock,
     "<b>ភាសាខ្មែរ (Khmer):</b>",
-    escapeHtml(body_km),
+    escapeHtml(post.body_km ?? ""),
     "",
     "<b>English:</b>",
-    escapeHtml(body_en),
+    escapeHtml(post.body_en ?? ""),
   ].join("\n");
 
   await sendMessage(store.telegram_chat_id, text, [
+    [{ text: t(lang, "btn_publish"), callback_data: `post_pub:${post.id}` }],
     [
-      { text: t(lang, "btn_publish"), callback_data: `post_pub:${post.id}` },
+      { text: t(lang, "btn_edit"), callback_data: `post_edit:${post.id}` },
       { text: t(lang, "btn_skip"), callback_data: `post_skip:${post.id}` },
     ],
   ]);

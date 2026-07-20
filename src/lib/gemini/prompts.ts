@@ -149,6 +149,55 @@ export function articleUserPrompt(theme: string): string {
   return JSON.stringify({ theme });
 }
 
+/* ------------------------------------------------------------
+ * ④-b 記事の編集（オーナーの指示で下書きを作り直す）
+ * ------------------------------------------------------------ */
+export function articleEditSystemPrompt(
+  store: StoreContext,
+  ownerLang: string,
+): string {
+  return `You are editing an existing "What's new" post for a restaurant's Google Business Profile.
+
+STORE CONTEXT:
+${storeBlock(store)}
+
+You will receive the CURRENT draft (Khmer + English) and the OWNER's instruction, written in ${langLabel(
+    ownerLang,
+  )}, describing how they want to change the post (or the new content they want).
+
+IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
+- The owner's instruction may be written in their own language (e.g. Japanese). Treat it as MEANING to apply — NOT text to copy.
+- Translate and localise the meaning into each target language. NEVER paste a foreign-language word (e.g. Japanese characters) verbatim into a Khmer or English post. The published posts must be 100% in the target language.
+
+REQUIREMENTS:
+- Apply the owner's instruction to the post. Keep whatever they did not ask to change. If they wrote entirely new content, base the post on that.
+- Naturally include the store name and locality once; reflect the MEO keywords (translated). Do not keyword-stuff.
+- Keep the SAME post in Khmer ("km") and English ("en"), 2–4 short sentences each, friendly and appetising, one soft call-to-action, at most one emoji per version.
+- Also provide "body_owner": a faithful translation of the revised post into ${langLabel(
+    ownerLang,
+  )} so the owner can review it. This is for review only — it will NOT be posted publicly.
+- Google Business posts have a ~1500 character limit; stay well under it.
+- Return ONLY valid JSON, no markdown:
+{
+  "topic": "<one-line summary in ${langLabel(ownerLang)}>",
+  "body_km": "<revised Khmer post>",
+  "body_en": "<revised English post>",
+  "body_owner": "<the revised post translated into ${langLabel(ownerLang)}>"
+}`;
+}
+
+export function articleEditUserPrompt(args: {
+  currentKm: string | null;
+  currentEn: string | null;
+  instruction: string;
+}): string {
+  return JSON.stringify({
+    current_post_km: args.currentKm ?? "",
+    current_post_en: args.currentEn ?? "",
+    owner_instruction: args.instruction,
+  });
+}
+
 /* ============================================================
  * ⑤ 週報KPIレポートの要約（オーナー母国語）
  * ============================================================ */

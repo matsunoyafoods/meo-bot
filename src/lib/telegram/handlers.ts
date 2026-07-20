@@ -26,7 +26,7 @@ import { bindStoreByInvite } from "@/lib/admin-stores";
 import { replyToReview } from "@/lib/google/business";
 import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
-import { publishPost, proposeArticle } from "@/lib/workflows/article";
+import { publishPost, proposeArticle, reviseArticlePost } from "@/lib/workflows/article";
 
 /** webhook のエントリーポイント */
 export async function handleUpdate(update: TgUpdate): Promise<void> {
@@ -65,6 +65,9 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   }
   if (state?.mode === "awaiting_post_keyword") {
     return handlePostKeywordText(store, text);
+  }
+  if (state?.mode === "awaiting_post_edit") {
+    return handlePostEditText(store, state.context.post_id as string, text);
   }
   if (state?.mode === "awaiting_category") {
     return handleCategoryText(store, text);
@@ -142,6 +145,22 @@ async function handlePostKeywordText(store: StoreRow, text: string): Promise<voi
     await proposeArticle(store, text.trim());
   } catch (e) {
     console.error("[telegram] custom post error", e);
+    await sendMessage(store.telegram_chat_id!, t(store.owner_lang, "error"));
+  }
+}
+
+/** オーナーの編集指示で下書きを作り直す */
+async function handlePostEditText(
+  store: StoreRow,
+  postId: string,
+  text: string,
+): Promise<void> {
+  await clearOwnerState(store.id);
+  if (!text.trim()) return;
+  try {
+    await reviseArticlePost(store, postId, text.trim());
+  } catch (e) {
+    console.error("[telegram] post edit error", e);
     await sendMessage(store.telegram_chat_id!, t(store.owner_lang, "error"));
   }
 }
@@ -285,9 +304,15 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     );
   }
 
-  // --- 記事: 投稿 / 見送り ---
+  // --- 記事: 投稿 / 編集 / 見送り ---
   if (data.startsWith("post_pub:")) {
     return publishNow(store, data.split(":")[1], cb);
+  }
+  if (data.startsWith("post_edit:")) {
+    const postId = data.split(":")[1];
+    await setOwnerState(store.id, "awaiting_post_edit", { post_id: postId });
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(store.owner_lang, "ask_post_edit"));
   }
   if (data.startsWith("post_skip:")) {
     const supabase = createSupabaseAdminClient();

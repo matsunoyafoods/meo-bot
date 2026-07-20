@@ -50,6 +50,8 @@ const ja: Dict = {
   error: "⚠️ エラーが発生しました。時間をおいて再度お試しください。",
   ask_post_keyword:
     "投稿したい内容やキーワードを入力してください（例: 金曜限定 辛味噌ラーメン 20%OFF、週末イベント）。AIが投稿文を作成します。",
+  ask_post_edit:
+    "どう直したいか、ご自身の言葉で送ってください（例: もっとカジュアルに、価格を追加、週末限定を強調）。内容を反映して下書きを作り直します。",
 };
 
 const en: Dict = {
@@ -95,6 +97,8 @@ const en: Dict = {
   error: "⚠️ Something went wrong. Please try again later.",
   ask_post_keyword:
     "Type the content or keywords you want to post (e.g. Friday-only spicy miso ramen 20% off, weekend event). The AI will write the post.",
+  ask_post_edit:
+    "Tell me how to change it in your own words (e.g. make it more casual, add the price, emphasise the weekend-only deal). I'll rewrite the draft accordingly.",
 };
 
 const km: Dict = {
@@ -140,6 +144,8 @@ const km: Dict = {
   error: "⚠️ មានបញ្ហា។ សូមព្យាយាមម្តងទៀត។",
   ask_post_keyword:
     "សូមបញ្ចូលខ្លឹមសារ ឬពាក្យគន្លឹះដែលអ្នកចង់បង្ហោះ (ឧ. រ៉ាមេនម្សៅហឹរ តែថ្ងៃសុក្រ បញ្ចុះ 20%, ព្រឹត្តិការណ៍ចុងសប្តាហ៍)។ AI នឹងសរសេរអត្ថបទ។",
+  ask_post_edit:
+    "សូមប្រាប់ពីរបៀបដែលអ្នកចង់កែ តាមពាក្យរបស់អ្នក (ឧ. ធ្វើឱ្យធម្មតាជាង, បន្ថែមតម្លៃ, បញ្ជាក់ការបញ្ចុះតម្លៃចុងសប្តាហ៍)។ ខ្ញុំនឹងសរសេរសេចក្តីព្រាងឡើងវិញ។",
 };
 
 const zh: Dict = {
@@ -184,6 +190,8 @@ const zh: Dict = {
   error: "⚠️ 出现错误，请稍后再试。",
   ask_post_keyword:
     "请输入您想发布的内容或关键词（例：仅限周五的辣味噌拉面 20% 折扣、周末活动）。AI 将撰写帖文。",
+  ask_post_edit:
+    "请用您自己的话告诉我如何修改（例：更口语化、加上价格、强调周末限定）。我会据此重写草稿。",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };

@@ -3,6 +3,8 @@ import { env } from "@/lib/env";
 import {
   articleSystemPrompt,
   articleUserPrompt,
+  articleEditSystemPrompt,
+  articleEditUserPrompt,
   kpiSummarySystemPrompt,
   kpiSummaryUserPrompt,
   ownerEditToReplySystemPrompt,
@@ -95,6 +97,23 @@ export function generateArticle(
   return generateJson(
     articleSystemPrompt(store, ownerLang),
     articleUserPrompt(theme),
+  );
+}
+
+/* ---------- ④-b 記事の編集（オーナー指示で作り直す） ---------- */
+export function reviseArticle(
+  store: StoreContext,
+  args: { currentKm: string | null; currentEn: string | null; instruction: string },
+  ownerLang: string,
+): Promise<{
+  topic: string;
+  body_km: string;
+  body_en: string;
+  body_owner: string;
+}> {
+  return generateJson(
+    articleEditSystemPrompt(store, ownerLang),
+    articleEditUserPrompt(args),
   );
 }
 

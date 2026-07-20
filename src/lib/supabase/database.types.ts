@@ -18,6 +18,7 @@ export type OwnerStateMode =
   | "awaiting_review_edit"
   | "awaiting_ticket_amount"
   | "awaiting_post_keyword"
+  | "awaiting_post_edit"
   | "awaiting_category"
   | "awaiting_keywords"
   | null;
