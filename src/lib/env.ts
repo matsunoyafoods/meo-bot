@@ -33,4 +33,6 @@ export const env = {
   geminiModel: () => optional("GEMINI_MODEL", "gemini-2.5-flash"),
 
   cronSecret: () => required("CRON_SECRET"),
+
+  adminPassword: () => required("ADMIN_PASSWORD"),
 } as const;

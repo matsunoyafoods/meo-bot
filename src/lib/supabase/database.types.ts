@@ -29,6 +29,9 @@ export interface StoreRow {
   google_account_id: string | null;
   google_location_id: string | null;
   onboarded: boolean;
+  trial_ends_at: string | null;
+  invite_token: string | null;
+  status: "active" | "suspended";
   created_at: string;
   updated_at: string;
 }

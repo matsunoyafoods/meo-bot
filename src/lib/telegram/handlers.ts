@@ -22,6 +22,7 @@ import {
   getReview,
 } from "@/lib/repo";
 import { buildAuthUrl } from "@/lib/google/oauth";
+import { bindStoreByInvite } from "@/lib/admin-stores";
 import { replyToReview } from "@/lib/google/business";
 import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
@@ -47,7 +48,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   const chatId = msg.chat.id;
   const text = (msg.text ?? "").trim();
 
-  if (text.startsWith("/start")) return cmdStart(chatId);
+  if (text.startsWith("/start")) return cmdStart(chatId, text);
   if (text.startsWith("/settings")) return cmdSettings(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力）
@@ -65,9 +66,17 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   await sendMessage(chatId, t(store.owner_lang, "settings_title"));
 }
 
-/* ---------- /start : 店舗作成 + OAuth URL ---------- */
-async function cmdStart(chatId: number): Promise<void> {
-  const store = await ensureStoreForChat(chatId);
+/* ---------- /start : 店舗作成/招待紐づけ + OAuth URL ---------- */
+async function cmdStart(chatId: number, text = "/start"): Promise<void> {
+  // "/start invite_<token>" のディープリンクを解釈
+  const param = text.split(/\s+/)[1] ?? "";
+  let store = null as Awaited<ReturnType<typeof ensureStoreForChat>> | null;
+  if (param.startsWith("invite_")) {
+    const inviteToken = param.slice("invite_".length);
+    store = await bindStoreByInvite(chatId, inviteToken);
+  }
+  // 招待が無効/未指定なら通常フロー（chat に紐づく店舗を用意）
+  if (!store) store = await ensureStoreForChat(chatId);
   const lang = store.owner_lang;
 
   // OAuth state を発行して chat と紐づけ

@@ -64,6 +64,15 @@ export function answerCallbackQuery(
   });
 }
 
+let cachedUsername: string | null = null;
+/** Bot の @username を取得（招待リンク t.me/<username>?start=... 用にキャッシュ） */
+export async function getBotUsername(): Promise<string> {
+  if (cachedUsername) return cachedUsername;
+  const me = await call<{ username: string }>("getMe", {});
+  cachedUsername = me.username;
+  return cachedUsername;
+}
+
 export function setWebhook(url: string, secretToken: string): Promise<unknown> {
   return call("setWebhook", {
     url,
