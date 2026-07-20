@@ -87,7 +87,7 @@ export async function createStoreForAdmin(input: {
     .from("stores")
     .insert({
       name: input.name,
-      owner_lang: input.ownerLang ?? "ja",
+      owner_lang: input.ownerLang ?? "en",
       avg_ticket_amount: input.avgTicketAmount ?? 10,
       avg_ticket_currency: input.avgTicketCurrency ?? "USD",
       invite_token: inviteToken,

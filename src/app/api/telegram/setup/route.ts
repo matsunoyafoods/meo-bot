@@ -19,10 +19,10 @@ export async function GET(req: Request): Promise<NextResponse> {
   await setWebhook(webhookUrl, env.telegramWebhookSecret());
 
   await setMyCommands([
-    { command: "start", description: "はじめる / Google連携" },
-    { command: "settings", description: "設定（言語・ジャンル・キーワード・客単価）" },
-    { command: "post", description: "投稿を作る（キーワードから）" },
-    { command: "diagnose", description: "MEO診断（Googleマップの改善提案）" },
+    { command: "start", description: "Start / Connect Google" },
+    { command: "settings", description: "Settings (language, genre, keywords, avg. spend)" },
+    { command: "post", description: "Create a post (from a keyword)" },
+    { command: "diagnose", description: "MEO diagnosis (Google Maps suggestions)" },
   ]);
 
   return NextResponse.json({ ok: true, webhookUrl });

@@ -23,7 +23,7 @@ export async function ensureStoreForChat(chatId: number): Promise<StoreRow> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("stores")
-    .insert({ telegram_chat_id: chatId })
+    .insert({ telegram_chat_id: chatId, owner_lang: "en" })
     .select("*")
     .single<StoreRow>();
   if (error || !data) throw new Error(`ensureStoreForChat failed: ${error?.message}`);
