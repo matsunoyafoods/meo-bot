@@ -6,7 +6,6 @@ import type {
 } from "@/lib/supabase/database.types";
 import {
   listReviews,
-  replyToReview,
   starToNumber,
   type GbpReview,
 } from "@/lib/google/business";
@@ -18,7 +17,7 @@ import { langLabel } from "@/lib/gemini/prompts";
 
 /**
  * 機能②③ の中核。
- * 新着口コミを取得 → 星4以上は自動返信、星3以下はオーナー承認フローへ。
+ * 新着口コミを取得 → 星に関わらず、全てオーナー承認フロー（確認/編集/送信）へ。
  */
 export async function processNewReviews(store: StoreRow): Promise<void> {
   if (!store.google_account_id || !store.google_location_id) return;
@@ -46,40 +45,13 @@ export async function processNewReviews(store: StoreRow): Promise<void> {
       continue;
     }
     const stars = starToNumber(r.starRating);
-    if (stars >= 4) {
-      await handleHighStar(store, r, gid, stars);
-    } else {
-      await handleLowStar(store, r, gid, stars);
-    }
+    // 星に関わらず全ての口コミをオーナー承認フロー（確認/編集/送信）へ
+    await handleReviewApproval(store, r, gid, stars);
   }
 }
 
-/* ---------- 星4以上: 完全自動返信 ---------- */
-async function handleHighStar(
-  store: StoreRow,
-  r: GbpReview,
-  gid: string,
-  stars: number,
-): Promise<void> {
-  const ctx = toStoreContext(store);
-  const { review_lang, reply } = await generateReviewReply(ctx, {
-    starRating: stars,
-    reviewerName: r.reviewer?.displayName,
-    comment: r.comment,
-  });
-
-  await replyToReview(store.id, r.name, reply);
-
-  await insertReview(store.id, r, "auto_replied", {
-    review_lang,
-    draft_reply: reply,
-    replied_at: new Date().toISOString(),
-    star_rating: stars,
-  });
-}
-
-/* ---------- 星3以下: 承認フロー ---------- */
-async function handleLowStar(
+/* ---------- 全口コミ: オーナー承認フロー（確認/編集/送信） ---------- */
+async function handleReviewApproval(
   store: StoreRow,
   r: GbpReview,
   gid: string,
@@ -118,8 +90,9 @@ export async function notifyOwnerLowStar(
   reviewLang: string,
 ): Promise<void> {
   const lang = store.owner_lang;
+  const titleEmoji = review.star_rating >= 4 ? "⭐" : "⚠️";
   const text = [
-    `<b>${t(lang, "low_review_title", { stars: review.star_rating })}</b>`,
+    `<b>${titleEmoji} ${t(lang, "low_review_title", { stars: review.star_rating })}</b>`,
     "",
     `<b>${t(lang, "original")}:</b>`,
     escapeHtml(review.comment ?? "(no text)"),
