@@ -32,6 +32,7 @@ export interface StoreRow {
   avg_ticket_currency: string;
   google_account_id: string | null;
   google_location_id: string | null;
+  google_place_id: string | null;
   onboarded: boolean;
   trial_ends_at: string | null;
   invite_token: string | null;
@@ -114,6 +115,18 @@ export type PostInsert = Omit<PostRow, "id" | "created_at"> & {
   created_at?: string;
 };
 export type PostUpdate = Partial<PostRow>;
+
+export interface ReportChatRow {
+  id: string;
+  store_id: string;
+  chat_id: number;
+  title: string | null;
+  created_at: string;
+}
+export type ReportChatInsert = Omit<ReportChatRow, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
 
 export interface KpiReportRow {
   id: string;

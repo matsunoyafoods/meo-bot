@@ -35,4 +35,7 @@ export const env = {
   cronSecret: () => required("CRON_SECRET"),
 
   adminPassword: () => required("ADMIN_PASSWORD"),
+
+  // MEO診断: Places API (New) 用のAPIキー
+  googleMapsApiKey: () => required("GOOGLE_MAPS_API_KEY"),
 } as const;

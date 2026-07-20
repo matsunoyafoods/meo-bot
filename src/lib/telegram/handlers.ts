@@ -15,6 +15,8 @@ import type { OwnerLang, StoreRow, ReviewRow } from "@/lib/supabase/database.typ
 import {
   ensureStoreForChat,
   getStoreByChatId,
+  getStoreByInviteToken,
+  addReportChat,
   updateStore,
   getOwnerState,
   setOwnerState,
@@ -27,6 +29,7 @@ import { replyToReview } from "@/lib/google/business";
 import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
 import { publishPost, proposeArticle, reviseArticlePost } from "@/lib/workflows/article";
+import { runDiagnosis } from "@/lib/workflows/diagnose";
 
 /** webhook のエントリーポイント */
 export async function handleUpdate(update: TgUpdate): Promise<void> {
@@ -47,10 +50,19 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 async function handleMessage(msg: TgMessage): Promise<void> {
   const chatId = msg.chat.id;
   const text = (msg.text ?? "").trim();
+  const chatType = msg.chat.type ?? "private";
+  const isGroup = chatType === "group" || chatType === "supergroup";
+
+  // グループ内では、招待トークン付き /start（レポート配信先の登録）だけ処理
+  if (isGroup) {
+    if (text.startsWith("/start")) return cmdStartGroup(msg, text);
+    return;
+  }
 
   if (text.startsWith("/start")) return cmdStart(chatId, text);
   if (text.startsWith("/settings")) return cmdSettings(chatId);
   if (text.startsWith("/post")) return cmdPost(chatId);
+  if (text.startsWith("/diagnose")) return cmdDiagnose(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
@@ -107,6 +119,38 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   // 招待リンク経由の初回は、続けて初期設定メニューを表示
   if (viaInvite) {
     await sendSettingsMenu(chatId, lang, t(lang, "setup_prompt"));
+  }
+}
+
+/* ---------- グループに追加されたとき: レポート配信先として登録 ---------- */
+async function cmdStartGroup(msg: TgMessage, text: string): Promise<void> {
+  const chatId = msg.chat.id;
+  // "/start invite_<token>" / "/start@Bot invite_<token>"
+  const param = text.split(/\s+/)[1] ?? "";
+  if (!param.startsWith("invite_")) {
+    return void sendMessage(chatId, t("ja", "group_invalid"));
+  }
+  const token = param.slice("invite_".length);
+  const store = await getStoreByInviteToken(token);
+  if (!store) {
+    return void sendMessage(chatId, t("ja", "group_invalid"));
+  }
+  await addReportChat(store.id, chatId, msg.chat.title ?? null);
+  await sendMessage(
+    chatId,
+    t(store.owner_lang, "group_linked", { name: store.name || "" }),
+  );
+}
+
+/* ---------- /diagnose : MEO診断 ---------- */
+async function cmdDiagnose(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  try {
+    await runDiagnosis(store);
+  } catch (e) {
+    console.error("[telegram] diagnose error", e);
+    await sendMessage(chatId, t(store.owner_lang, "error"));
   }
 }
 

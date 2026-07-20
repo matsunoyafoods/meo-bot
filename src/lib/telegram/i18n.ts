@@ -52,6 +52,16 @@ const ja: Dict = {
     "投稿したい内容やキーワードを入力してください（例: 金曜限定 辛味噌ラーメン 20%OFF、週末イベント）。AIが投稿文を作成します。",
   ask_post_edit:
     "どう直したいか、ご自身の言葉で送ってください（例: もっとカジュアルに、価格を追加、週末限定を強調）。内容を反映して下書きを作り直します。",
+  diagnose_running: "🔍 GoogleマップのMEO状態を診断しています…（少々お待ちください）",
+  diagnose_not_found:
+    "お店のGoogleマップが見つかりませんでした。店名を正確に設定するか、Google連携をご確認ください。",
+  diagnose_title: "🔍 MEO診断レポート",
+  diagnose_score: "MEOスコア",
+  diagnose_good: "✅ よい点",
+  diagnose_improve: "🚀 改善するともっと伸びる",
+  group_linked:
+    "✅ このグループを店舗「{name}」のレポート配信先に登録しました。週次・月次レポートがここに届きます。",
+  group_invalid: "招待リンクが無効です。管理者に新しいグループ用リンクをご確認ください。",
 };
 
 const en: Dict = {
@@ -99,6 +109,16 @@ const en: Dict = {
     "Type the content or keywords you want to post (e.g. Friday-only spicy miso ramen 20% off, weekend event). The AI will write the post.",
   ask_post_edit:
     "Tell me how to change it in your own words (e.g. make it more casual, add the price, emphasise the weekend-only deal). I'll rewrite the draft accordingly.",
+  diagnose_running: "🔍 Checking your Google Maps MEO status… (please wait a moment)",
+  diagnose_not_found:
+    "Couldn't find your store on Google Maps. Please set the exact store name or check your Google connection.",
+  diagnose_title: "🔍 MEO diagnosis report",
+  diagnose_score: "MEO score",
+  diagnose_good: "✅ What's good",
+  diagnose_improve: "🚀 Improve these to grow",
+  group_linked:
+    "✅ This group is now a report channel for \"{name}\". Weekly and monthly reports will arrive here.",
+  group_invalid: "Invalid invite link. Please ask the admin for a new group link.",
 };
 
 const km: Dict = {
@@ -146,6 +166,16 @@ const km: Dict = {
     "សូមបញ្ចូលខ្លឹមសារ ឬពាក្យគន្លឹះដែលអ្នកចង់បង្ហោះ (ឧ. រ៉ាមេនម្សៅហឹរ តែថ្ងៃសុក្រ បញ្ចុះ 20%, ព្រឹត្តិការណ៍ចុងសប្តាហ៍)។ AI នឹងសរសេរអត្ថបទ។",
   ask_post_edit:
     "សូមប្រាប់ពីរបៀបដែលអ្នកចង់កែ តាមពាក្យរបស់អ្នក (ឧ. ធ្វើឱ្យធម្មតាជាង, បន្ថែមតម្លៃ, បញ្ជាក់ការបញ្ចុះតម្លៃចុងសប្តាហ៍)។ ខ្ញុំនឹងសរសេរសេចក្តីព្រាងឡើងវិញ។",
+  diagnose_running: "🔍 កំពុងវិនិច្ឆ័យស្ថានភាព MEO នៅ Google Maps… (សូមរង់ចាំបន្តិច)",
+  diagnose_not_found:
+    "រកមិនឃើញហាងរបស់អ្នកនៅ Google Maps ទេ។ សូមកំណត់ឈ្មោះហាងឲ្យត្រឹមត្រូវ ឬពិនិត្យការភ្ជាប់ Google។",
+  diagnose_title: "🔍 របាយការណ៍វិនិច្ឆ័យ MEO",
+  diagnose_score: "ពិន្ទុ MEO",
+  diagnose_good: "✅ ចំណុចល្អ",
+  diagnose_improve: "🚀 កែសម្រួលដើម្បីលូតលាស់",
+  group_linked:
+    "✅ ក្រុមនេះត្រូវបានចុះឈ្មោះជាកន្លែងទទួលរបាយការណ៍សម្រាប់ហាង «{name}»។ របាយការណ៍ប្រចាំសប្តាហ៍/ខែ នឹងមកដល់ទីនេះ។",
+  group_invalid: "តំណអញ្ជើញមិនត្រឹមត្រូវ។ សូមសុំតំណក្រុមថ្មីពីអ្នកគ្រប់គ្រង។",
 };
 
 const zh: Dict = {
@@ -192,6 +222,16 @@ const zh: Dict = {
     "请输入您想发布的内容或关键词（例：仅限周五的辣味噌拉面 20% 折扣、周末活动）。AI 将撰写帖文。",
   ask_post_edit:
     "请用您自己的话告诉我如何修改（例：更口语化、加上价格、强调周末限定）。我会据此重写草稿。",
+  diagnose_running: "🔍 正在诊断您的 Google 地图 MEO 状态……（请稍候）",
+  diagnose_not_found:
+    "在 Google 地图上找不到您的店铺。请设置准确的店名或检查 Google 连接。",
+  diagnose_title: "🔍 MEO 诊断报告",
+  diagnose_score: "MEO 评分",
+  diagnose_good: "✅ 做得好的地方",
+  diagnose_improve: "🚀 改进后可增长",
+  group_linked:
+    "✅ 本群已登记为店铺「{name}」的报告接收群。周报和月报将发送到这里。",
+  group_invalid: "邀请链接无效。请向管理员索取新的群链接。",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };

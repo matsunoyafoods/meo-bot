@@ -7,6 +7,8 @@ import {
   articleEditUserPrompt,
   kpiSummarySystemPrompt,
   kpiSummaryUserPrompt,
+  meoDiagnosisSystemPrompt,
+  meoDiagnosisUserPrompt,
   ownerEditToReplySystemPrompt,
   reviewReplySystemPrompt,
   reviewReplyUserPrompt,
@@ -114,6 +116,29 @@ export function reviseArticle(
   return generateJson(
     articleEditSystemPrompt(store, ownerLang),
     articleEditUserPrompt(args),
+  );
+}
+
+/* ---------- ⑦ MEO診断 ---------- */
+export interface MeoImprovement {
+  title: string;
+  action: string;
+  impact: "high" | "medium" | "low";
+}
+export interface MeoDiagnosis {
+  score: number;
+  headline: string;
+  good: string[];
+  improve: MeoImprovement[];
+}
+export function diagnoseMeo(
+  store: StoreContext,
+  snapshot: unknown,
+  ownerLang: string,
+): Promise<MeoDiagnosis> {
+  return generateJson<MeoDiagnosis>(
+    meoDiagnosisSystemPrompt(store, ownerLang),
+    meoDiagnosisUserPrompt(snapshot),
   );
 }
 

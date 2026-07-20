@@ -81,6 +81,15 @@ export function setWebhook(url: string, secretToken: string): Promise<unknown> {
   });
 }
 
+export interface BotCommand {
+  command: string;
+  description: string;
+}
+/** コマンドメニュー（/ を押すと出る一覧）を登録 */
+export function setMyCommands(commands: BotCommand[]): Promise<unknown> {
+  return call("setMyCommands", { commands });
+}
+
 /* --------- Telegram Update の最小型 --------- */
 export interface TgUser {
   id: number;
@@ -89,6 +98,9 @@ export interface TgUser {
 }
 export interface TgChat {
   id: number;
+  /** "private" | "group" | "supergroup" | "channel" */
+  type?: string;
+  title?: string;
 }
 export interface TgMessage {
   message_id: number;

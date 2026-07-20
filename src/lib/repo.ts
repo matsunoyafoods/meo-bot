@@ -63,6 +63,39 @@ export async function clearOwnerState(storeId: string): Promise<void> {
   await setOwnerState(storeId, null, {});
 }
 
+export async function getStoreByInviteToken(token: string): Promise<StoreRow | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("invite_token", token)
+    .maybeSingle<StoreRow>();
+  return data ?? null;
+}
+
+/** グループ等のレポート配信先を登録（重複は無視） */
+export async function addReportChat(
+  storeId: string,
+  chatId: number,
+  title: string | null,
+): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("report_chats")
+    .upsert({ store_id: storeId, chat_id: chatId, title }, { onConflict: "store_id,chat_id" });
+}
+
+/** 店舗のレポート配信先 chat_id 一覧 */
+export async function listReportChatIds(storeId: string): Promise<number[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("report_chats")
+    .select("chat_id")
+    .eq("store_id", storeId)
+    .returns<{ chat_id: number }[]>();
+  return (data ?? []).map((r) => r.chat_id);
+}
+
 export async function getReview(reviewId: string): Promise<ReviewRow | null> {
   const supabase = createSupabaseAdminClient();
   const { data } = await supabase

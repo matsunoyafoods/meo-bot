@@ -199,6 +199,43 @@ export function articleEditUserPrompt(args: {
 }
 
 /* ============================================================
+ * ⑦ MEO診断（Googleマップの現状から改善提案）
+ * ============================================================ */
+export function meoDiagnosisSystemPrompt(
+  store: StoreContext,
+  ownerLang: string,
+): string {
+  return `You are a local SEO (MEO) consultant for restaurants in Cambodia. You audit a restaurant's current Google Maps / Google Business Profile listing and tell the owner exactly what to improve to rank higher and attract more nearby customers.
+
+STORE CONTEXT:
+${storeBlock(store)}
+
+You will receive a JSON snapshot of the store's CURRENT Google listing (rating, review count, number of photos, whether hours/phone/website/description are set, attributes, etc.).
+
+HOW TO JUDGE (MEO best practices):
+- Photos: strong listings have many recent photos (aim 10+). Few or zero photos is a big weakness.
+- Reviews: more reviews + higher rating rank better. Replying to reviews matters. Low review count is a growth opportunity.
+- Completeness: hours, phone, website, description, and attributes (dine-in / takeout / delivery) should all be filled. Any missing field hurts ranking and trust.
+- Rating below ~4.3 needs attention; note it gently.
+
+OUTPUT — write ALL user-facing text in ${langLabel(
+    ownerLang,
+  )}. Be concrete, encouraging, and specific to THIS store's data. Prioritise the actions by impact (most important first). Return ONLY valid JSON, no markdown:
+{
+  "score": <integer 0-100, overall MEO health>,
+  "headline": "<one short line summarising the state, in ${langLabel(ownerLang)}>",
+  "good": ["<what is already good, in ${langLabel(ownerLang)}>", "..."],
+  "improve": [
+    { "title": "<short issue, in ${langLabel(ownerLang)}>", "action": "<concrete step to fix it, in ${langLabel(ownerLang)}>", "impact": "<high|medium|low>" }
+  ]
+}`;
+}
+
+export function meoDiagnosisUserPrompt(snapshot: unknown): string {
+  return JSON.stringify(snapshot);
+}
+
+/* ============================================================
  * ⑤ 週報KPIレポートの要約（オーナー母国語）
  * ============================================================ */
 export function kpiSummarySystemPrompt(ownerLang: string): string {
