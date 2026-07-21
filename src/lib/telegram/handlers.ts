@@ -106,11 +106,9 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   // "/start invite_<token>" のディープリンクを解釈
   const param = text.split(/\s+/)[1] ?? "";
   let store = null as Awaited<ReturnType<typeof ensureStoreForChat>> | null;
-  let viaInvite = false;
   if (param.startsWith("invite_")) {
     const inviteToken = param.slice("invite_".length);
     store = await bindStoreByInvite(chatId, inviteToken);
-    viaInvite = store != null;
   }
   // 招待が無効/未指定なら通常フロー（chat に紐づく店舗を用意）
   if (!store) store = await ensureStoreForChat(chatId);
@@ -118,7 +116,6 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   // "/start rep_<code>" : 営業マン専用リンク → 担当を自動紐づけ（初回のみ）
   if (param.startsWith("rep_")) {
     await attributeStoreToRep(store, param.slice("rep_".length));
-    viaInvite = true; // 初期設定メニューを表示
   }
   const lang = store.owner_lang;
 
@@ -126,18 +123,23 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   const state = randomUUID();
   const supabase = createSupabaseAdminClient();
   await supabase.from("oauth_states").insert({ state, telegram_chat_id: chatId });
-
   const url = buildAuthUrl(state);
-  await sendMessage(chatId, t(lang, "welcome"), [
-    [{ text: t(lang, "connect_google"), url }],
-  ]);
 
-  // 招待リンク経由の初回は、続けて初期設定メニューを表示
-  if (viaInvite) {
+  // 未接続（初期設定がまだ）の店舗 → 初期設定を先に案内する
+  //   ① まず母国語を選んでもらう（以降のメッセージを母国語で表示するため）
+  //   ② Google 連携ボタン付きのウェルカム
+  //   ③ 初期設定メニュー（言語・ジャンル・キーワード・客単価）
+  // ※ メインメニューは、設定・連携が済んだ店舗にだけ表示する
+  if (!store.onboarded) {
+    await sendLanguageChooser(chatId, lang);
+    await sendMessage(chatId, t(lang, "welcome"), [
+      [{ text: t(lang, "connect_google"), url }],
+    ]);
     await sendSettingsMenu(chatId, lang, t(lang, "setup_prompt"));
+    return;
   }
 
-  // メインメニュー（タップ操作）を表示
+  // 設定・連携が済んだ店舗 → メインメニュー（タップ操作）
   await sendMainMenu(chatId, lang);
 }
 
@@ -365,7 +367,12 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     const lang = data.split(":")[1] as OwnerLang;
     await updateStore(store.id, { owner_lang: lang });
     await answerCallbackQuery(cb.id);
-    return void sendMessage(chatId, t(lang, "lang_saved", { lang: langName(lang) }));
+    await sendMessage(chatId, t(lang, "lang_saved", { lang: langName(lang) }));
+    // 初期設定中（未接続）なら、選んだ言語で初期設定メニューを出し直す
+    if (!store.onboarded) {
+      await sendSettingsMenu(chatId, lang, t(lang, "setup_prompt"));
+    }
+    return;
   }
   if (data === "set_ticket") {
     await setOwnerState(store.id, "awaiting_ticket_amount", {});
@@ -464,8 +471,8 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
   await answerCallbackQuery(cb.id);
 }
 
-async function showLanguageMenu(store: StoreRow, cb: TgCallbackQuery): Promise<void> {
-  const lang = store.owner_lang;
+/** 言語選択メニュー（4言語のボタン）を送る */
+async function sendLanguageChooser(chatId: number, lang: OwnerLang): Promise<void> {
   const kb: InlineKeyboard = [
     [
       { text: "日本語", callback_data: "set_lang:ja" },
@@ -476,7 +483,11 @@ async function showLanguageMenu(store: StoreRow, cb: TgCallbackQuery): Promise<v
       { text: "中文", callback_data: "set_lang:zh" },
     ],
   ];
-  await sendMessage(store.telegram_chat_id!, t(lang, "choose_language"), kb);
+  await sendMessage(chatId, t(lang, "choose_language"), kb);
+}
+
+async function showLanguageMenu(store: StoreRow, cb: TgCallbackQuery): Promise<void> {
+  await sendLanguageChooser(store.telegram_chat_id!, store.owner_lang);
 }
 
 async function sendReviewNow(
