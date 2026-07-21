@@ -293,16 +293,18 @@ async function handleKeywordsText(store: StoreRow, text: string): Promise<void> 
 /* ---------- 客単価テキスト入力 ---------- */
 async function handleTicketText(store: StoreRow, text: string): Promise<void> {
   const lang = store.owner_lang;
-  // "10 USD" / "40000 KHR" / "$10" などを緩くパース
-  const m = text.match(/([\d.,]+)\s*([A-Za-z$￥¥]{1,4})?/);
-  if (!m) {
+  // 金額を抜き出す（"10 USD" / "$10" / "฿120" / "50000₫" / "120 THB" など）
+  const amountMatch = text.match(/[\d][\d.,]*/);
+  if (!amountMatch) {
     return void sendMessage(store.telegram_chat_id!, t(lang, "ticket_invalid"));
   }
-  const amount = Number(m[1].replace(/,/g, ""));
+  const amount = Number(amountMatch[0].replace(/,/g, ""));
   if (!Number.isFinite(amount) || amount <= 0) {
     return void sendMessage(store.telegram_chat_id!, t(lang, "ticket_invalid"));
   }
-  const currency = normalizeCurrency(m[2]);
+  // 数字・記号(小数点/桁区切り)・空白を除いた残りを通貨トークンとして扱う（どの国の通貨でも可）
+  const currencyRaw = text.replace(/[\d.,\s]/g, "").trim();
+  const currency = normalizeCurrency(currencyRaw);
   await updateStore(store.id, {
     avg_ticket_amount: amount,
     avg_ticket_currency: currency,
@@ -314,10 +316,41 @@ async function handleTicketText(store: StoreRow, text: string): Promise<void> {
   );
 }
 
+/** よくある通貨記号 → ISOコード（表示をきれいにするためのおまけ。無くても自由入力は通る） */
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  $: "USD",
+  "￥": "JPY",
+  "¥": "JPY",
+  "€": "EUR",
+  "£": "GBP",
+  "฿": "THB",
+  "₩": "KRW",
+  "₫": "VND",
+  "₹": "INR",
+  "₱": "PHP",
+  "₭": "LAK",
+  "៛": "KHR",
+  "円": "JPY",
+  "元": "CNY",
+  "₴": "UAH",
+  "₦": "NGN",
+  "﷼": "SAR",
+};
+
+/**
+ * 通貨を正規化（固定リストなし・どの国の通貨でも受け付ける）。
+ *  - 記号は代表的なものだけ ISO コードに変換
+ *  - 英字コード(USD/THB/VND 等)はそのまま大文字で採用
+ *  - それ以外の記号・文字は入力されたまま保存（真に自由）
+ *  - 未指定なら USD をデフォルト
+ */
 function normalizeCurrency(raw?: string): string {
-  if (!raw) return "USD";
-  const c = raw.toUpperCase().replace("$", "USD").replace(/[￥¥]/, "JPY");
-  return ["USD", "KHR", "JPY", "CNY"].includes(c) ? c : "USD";
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "USD";
+  if (CURRENCY_SYMBOLS[trimmed]) return CURRENCY_SYMBOLS[trimmed];
+  const upper = trimmed.toUpperCase();
+  if (/^[A-Z]{2,5}$/.test(upper)) return upper;
+  return trimmed;
 }
 
 /* ---------- 編集フロー: オーナー入力 → 相手言語へ翻訳 ---------- */

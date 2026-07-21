@@ -28,7 +28,7 @@ const ja: Dict = {
   choose_language: "通知・翻訳に使う母国語を選んでください。",
   lang_saved: "✅ 母国語を「{lang}」に設定しました。",
   ask_ticket:
-    "客単価を「金額 通貨」の形式で送ってください。例: 10 USD / 40000 KHR",
+    "客単価を「金額 通貨」の形式で送ってください。通貨は自由です（例: 10 USD、120 THB、40000 KHR、1500 JPY、50000 VND）。",
   ticket_saved: "✅ 客単価を {amount} {currency} に設定しました。",
   ticket_invalid: "形式が正しくありません。例: 10 USD",
   low_review_title: "星{stars}の口コミが届きました",
@@ -105,7 +105,8 @@ const en: Dict = {
     "Let's set things up first. Use the buttons below to set your language, genre, keywords and average ticket (you can change them later with /settings).",
   choose_language: "Choose the language for notifications and translations.",
   lang_saved: "✅ Language set to \"{lang}\".",
-  ask_ticket: "Send your average ticket as \"amount currency\". e.g. 10 USD / 40000 KHR",
+  ask_ticket:
+    "Send your average ticket as \"amount currency\". Any currency works (e.g. 10 USD, 120 THB, 40000 KHR, 1500 JPY, 50000 VND).",
   ticket_saved: "✅ Average ticket set to {amount} {currency}.",
   ticket_invalid: "Invalid format. Example: 10 USD",
   low_review_title: "New {stars}-star review",
@@ -182,7 +183,8 @@ const km: Dict = {
     "ដំបូងសូមកំណត់ការកំណត់។ ប្រើប៊ូតុងខាងក្រោមដើម្បីកំណត់ភាសា ប្រភេទ ពាក្យគន្លឹះ និងតម្លៃមធ្យម (អាចផ្លាស់ប្តូរពេលក្រោយដោយ /settings)។",
   choose_language: "ជ្រើសរើសភាសាសម្រាប់ការជូនដំណឹង និងការបកប្រែ។",
   lang_saved: "✅ បានកំណត់ភាសាទៅ «{lang}»។",
-  ask_ticket: "ផ្ញើតម្លៃមធ្យមជា «ចំនួន រូបិយប័ណ្ណ»។ ឧ. 10 USD / 40000 KHR",
+  ask_ticket:
+    "ផ្ញើតម្លៃមធ្យមជា «ចំនួន រូបិយប័ណ្ណ»។ រូបិយប័ណ្ណណាក៏បាន (ឧ. 10 USD, 120 THB, 40000 KHR, 1500 JPY, 50000 VND)។",
   ticket_saved: "✅ បានកំណត់តម្លៃមធ្យម {amount} {currency}។",
   ticket_invalid: "ទម្រង់មិនត្រឹមត្រូវ។ ឧ. 10 USD",
   low_review_title: "មតិផ្កាយ {stars} ថ្មី",
@@ -259,7 +261,8 @@ const zh: Dict = {
     "先来做初始设置吧。用下方按钮设置语言、类别、关键词和客单价（之后可用 /settings 修改）。",
   choose_language: "请选择用于通知和翻译的语言。",
   lang_saved: "✅ 语言已设置为「{lang}」。",
-  ask_ticket: "请以「金额 货币」发送客单价。例如：10 USD / 40000 KHR",
+  ask_ticket:
+    "请以「金额 货币」发送客单价。任何货币均可（例：10 USD、120 THB、40000 KHR、1500 JPY、50000 VND）。",
   ticket_saved: "✅ 客单价已设置为 {amount} {currency}。",
   ticket_invalid: "格式不正确。例如：10 USD",
   low_review_title: "收到 {stars} 星评论",
