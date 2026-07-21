@@ -113,7 +113,7 @@ export default function RepsPage() {
       </p>
       <h1 style={{ fontSize: 26 }}>営業マン・報酬 / Sales reps</h1>
       <p style={{ color: "#5F7373", fontSize: 14 }}>
-        報酬: 1〜20件目は1件 $20（一時・契約した月に支払い）／21件目以降は1件 $5/月（継続・稼働中のみ）。
+        報酬: 新規契約は1件 $20（一時・契約した月）＋ 稼働中の全契約は1件 $5/月（継続）。契約した月は $25、翌月以降は $5/月。
       </p>
 
       <div style={{ ...box, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>

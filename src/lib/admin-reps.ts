@@ -69,24 +69,19 @@ export async function listRepsForAdmin(month = currentMonth()): Promise<AdminRep
 
   const uname = await username();
   return (reps ?? []).map((r) => {
-    const list = (byRep.get(r.id) ?? []).sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
+    const list = byRep.get(r.id) ?? [];
 
-    let oneTimeCount = 0; // 今月の新規(1〜20件目)
-    let recurringCount = 0; // 21件目以降で稼働中
+    // モデル: 全件に一時$20（契約した月）＋ 稼働中は$5/月（継続）
+    let oneTimeCount = 0; // 対象月に新規契約した件数
+    let recurringCount = 0; // 対象月末までに契約済みで稼働中の件数
     let active = 0;
-    list.forEach((s, i) => {
-      const rank = i + 1; // 契約順(1始まり)
+    list.forEach((s) => {
       const ts = new Date(s.created_at).getTime();
       if (s.status === "active") active++;
-      if (rank <= THRESHOLD) {
-        // 1〜20件目: 登録月が対象月なら一時報酬
-        if (ts >= start && ts < end) oneTimeCount++;
-      } else {
-        // 21件目以降: 稼働中 & 対象月末までに契約済みなら継続報酬
-        if (s.status === "active" && ts < end) recurringCount++;
-      }
+      // 一時報酬: 対象月に契約した全件
+      if (ts >= start && ts < end) oneTimeCount++;
+      // 継続報酬: 稼働中 & 対象月末までに契約済みの全件
+      if (s.status === "active" && ts < end) recurringCount++;
     });
 
     const oneTimeAmount = oneTimeCount * ONE_TIME_BONUS;
