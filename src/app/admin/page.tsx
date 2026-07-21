@@ -383,6 +383,12 @@ export default function AdminPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <h1 style={{ margin: 0 }}>{t("title")}</h1>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <a
+            href="/admin/reps"
+            style={{ ...btnGhost, textDecoration: "none", display: "inline-block" }}
+          >
+            💰 営業マン報酬 / Reps
+          </a>
           {LangPicker}
           <button onClick={logout} style={btnGhost}>
             {t("logout")}
