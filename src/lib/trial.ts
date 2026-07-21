@@ -33,6 +33,15 @@ export function trialNotifyTarget(daysLeft: number | null): number {
   return 0;
 }
 
+/** 日付に n ヶ月を足す（月末は丸める。例: 1/31 + 1ヶ月 → 2/28）。 */
+export function addMonths(date: Date, n: number): Date {
+  const d = new Date(date.getTime());
+  const day = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + n);
+  if (d.getUTCDate() < day) d.setUTCDate(0);
+  return d;
+}
+
 /** 期限を YYYY/MM/DD で表示（カンボジア時間 UTC+7）。 */
 export function formatTrialDate(iso: string): string {
   const d = new Date(new Date(iso).getTime() + 7 * 3600 * 1000);

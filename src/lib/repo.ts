@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { addMonths } from "@/lib/trial";
 import type {
   StoreRow,
   OwnerStateRow,
@@ -16,8 +17,8 @@ export async function getStoreByChatId(chatId: number): Promise<StoreRow | null>
   return data ?? null;
 }
 
-/** 新規店舗のデフォルト無料期間（日数）。招待/紹介リンク経由でなくても付与する。 */
-const DEFAULT_TRIAL_DAYS = 60;
+/** 新規店舗のデフォルト無料期間（ヶ月）。招待/紹介リンク経由でなくても付与する。 */
+const DEFAULT_TRIAL_MONTHS = 1;
 
 /** /start 時: chat に紐づく店舗が無ければ作る（無料期間つき） */
 export async function ensureStoreForChat(chatId: number): Promise<StoreRow> {
@@ -29,7 +30,7 @@ export async function ensureStoreForChat(chatId: number): Promise<StoreRow> {
     .insert({
       telegram_chat_id: chatId,
       owner_lang: "en",
-      trial_ends_at: new Date(Date.now() + DEFAULT_TRIAL_DAYS * 86_400_000).toISOString(),
+      trial_ends_at: addMonths(new Date(), DEFAULT_TRIAL_MONTHS).toISOString(),
     })
     .select("*")
     .single<StoreRow>();

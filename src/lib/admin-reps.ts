@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getBotUsername } from "@/lib/telegram/client";
+import { addMonths } from "@/lib/trial";
 import type { SalesRepRow, StoreRow } from "@/lib/supabase/database.types";
 
 /** 報酬ルール（1件あたり） */
@@ -163,7 +164,7 @@ export async function attributeStoreToRep(
   const supabase = createSupabaseAdminClient();
   const patch: Partial<StoreRow> = { sales_rep_id: rep.id };
   if (!store.trial_ends_at) {
-    patch.trial_ends_at = new Date(Date.now() + 60 * 86_400_000).toISOString();
+    patch.trial_ends_at = addMonths(new Date(), 1).toISOString();
   }
   await supabase.from("stores").update(patch).eq("id", store.id);
 }
