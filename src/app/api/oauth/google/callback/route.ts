@@ -17,7 +17,11 @@ export async function GET(req: Request): Promise<NextResponse> {
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
-  if (error) return html(`連携がキャンセルされました (${error})。Telegramに戻ってやり直してください。`);
+  if (error) {
+    // error はクエリ由来（攻撃者が操作可能）なので、安全な文字だけに制限してから表示（反射型XSS対策）
+    const safeError = error.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+    return html(`連携がキャンセルされました (${safeError})。Telegramに戻ってやり直してください。`);
+  }
   if (!code || !state) return html("不正なリクエストです。");
 
   const supabase = createSupabaseAdminClient();
