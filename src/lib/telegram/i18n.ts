@@ -75,6 +75,11 @@ const ja: Dict = {
   backlog_low_intro: "⚠️ 1-3★ を1件ずつ表示します（{n}件）。それぞれ確認して送信してください。",
   backlog_more: "残り {n} 件あります。もう一度 /reviews で続けられます。",
   btn_skip_review: "⏭ スキップ",
+  menu_title: "何をしますか？下のボタンから選べます。",
+  menu_post: "📝 投稿を作る",
+  menu_diagnose: "🔍 MEO診断",
+  menu_reviews: "📮 未返信口コミ",
+  menu_settings: "⚙️ 設定",
 };
 
 const en: Dict = {
@@ -145,6 +150,11 @@ const en: Dict = {
   backlog_low_intro: "⚠️ Showing 1-3★ one by one ({n}). Please review and send each.",
   backlog_more: "{n} left. Run /reviews again to continue.",
   btn_skip_review: "⏭ Skip",
+  menu_title: "What would you like to do? Pick from the buttons below.",
+  menu_post: "📝 Create a post",
+  menu_diagnose: "🔍 MEO check",
+  menu_reviews: "📮 Unreplied reviews",
+  menu_settings: "⚙️ Settings",
 };
 
 const km: Dict = {
@@ -215,6 +225,11 @@ const km: Dict = {
   backlog_low_intro: "⚠️ បង្ហាញ 1-3★ ម្តងមួយ ({n})។ សូមពិនិត្យ ហើយផ្ញើម្តងមួយ។",
   backlog_more: "នៅសល់ {n} ។ ចុច /reviews ម្តងទៀតដើម្បីបន្ត។",
   btn_skip_review: "⏭ រំលង",
+  menu_title: "តើអ្នកចង់ធ្វើអ្វី? សូមជ្រើសរើសពីប៊ូតុងខាងក្រោម។",
+  menu_post: "📝 បង្កើតការបង្ហោះ",
+  menu_diagnose: "🔍 វិនិច្ឆ័យ MEO",
+  menu_reviews: "📮 មតិមិនទាន់ឆ្លើយតប",
+  menu_settings: "⚙️ ការកំណត់",
 };
 
 const zh: Dict = {
@@ -284,6 +299,11 @@ const zh: Dict = {
   backlog_low_intro: "⚠️ 逐条显示 1-3★（{n} 条）。请逐条查看并发送。",
   backlog_more: "还剩 {n} 条。再次运行 /reviews 可继续。",
   btn_skip_review: "⏭ 跳过",
+  menu_title: "您想做什么？请从下方按钮选择。",
+  menu_post: "📝 创建帖文",
+  menu_diagnose: "🔍 MEO 诊断",
+  menu_reviews: "📮 未回复评论",
+  menu_settings: "⚙️ 设置",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };

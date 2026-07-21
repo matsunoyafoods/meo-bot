@@ -71,6 +71,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (text.startsWith("/post")) return cmdPost(chatId);
   if (text.startsWith("/diagnose")) return cmdDiagnose(chatId);
   if (text.startsWith("/reviews")) return cmdReviews(chatId);
+  if (text.startsWith("/menu")) return cmdMenu(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
@@ -128,6 +129,9 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   if (viaInvite) {
     await sendSettingsMenu(chatId, lang, t(lang, "setup_prompt"));
   }
+
+  // メインメニュー（タップ操作）を表示
+  await sendMainMenu(chatId, lang);
 }
 
 /* ---------- グループに追加されたとき: レポート配信先として登録 ---------- */
@@ -172,6 +176,26 @@ async function cmdReviews(chatId: number): Promise<void> {
     console.error("[telegram] backlog error", e);
     await sendMessage(chatId, t(store.owner_lang, "error"));
   }
+}
+
+/* ---------- /menu : メインメニュー（タップ操作） ---------- */
+async function cmdMenu(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  await sendMainMenu(chatId, store?.owner_lang ?? "en");
+}
+
+/** メインメニュー（投稿・診断・口コミ・設定） */
+async function sendMainMenu(chatId: number, lang: OwnerLang): Promise<void> {
+  await sendMessage(chatId, t(lang, "menu_title"), [
+    [
+      { text: t(lang, "menu_post"), callback_data: "menu_post" },
+      { text: t(lang, "menu_diagnose"), callback_data: "menu_diagnose" },
+    ],
+    [
+      { text: t(lang, "menu_reviews"), callback_data: "menu_reviews" },
+      { text: t(lang, "menu_settings"), callback_data: "menu_settings" },
+    ],
+  ]);
 }
 
 /* ---------- /settings : インラインメニュー ---------- */
@@ -350,6 +374,28 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     await setOwnerState(store.id, "awaiting_keywords", {});
     await answerCallbackQuery(cb.id);
     return void sendMessage(chatId, t(store.owner_lang, "ask_keywords"));
+  }
+
+  // --- メインメニュー ---
+  if (data === "menu_settings") {
+    await answerCallbackQuery(cb.id);
+    return sendSettingsMenu(chatId, store.owner_lang);
+  }
+  if (data === "menu_post") {
+    await setOwnerState(store.id, "awaiting_post_keyword", {});
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(store.owner_lang, "ask_post_keyword"));
+  }
+  if (data === "menu_diagnose" || data === "menu_reviews") {
+    await answerCallbackQuery(cb.id);
+    try {
+      if (data === "menu_diagnose") await runDiagnosis(store);
+      else await startBacklog(store);
+    } catch (e) {
+      console.error("[telegram] menu cb error", e);
+      await sendMessage(chatId, t(store.owner_lang, "error"));
+    }
+    return;
   }
 
   // --- バックログ: 未返信口コミの一括処理 ---

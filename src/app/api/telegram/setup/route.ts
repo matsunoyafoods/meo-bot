@@ -20,6 +20,7 @@ export async function GET(req: Request): Promise<NextResponse> {
 
   await setMyCommands([
     { command: "start", description: "Start / Connect Google" },
+    { command: "menu", description: "Main menu (post, MEO check, reviews, settings)" },
     { command: "settings", description: "Settings (language, genre, keywords, avg. spend)" },
     { command: "post", description: "Create a post (from a keyword)" },
     { command: "reviews", description: "Reply to unreplied reviews (bulk)" },
