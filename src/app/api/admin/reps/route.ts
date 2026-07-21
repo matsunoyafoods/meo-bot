@@ -5,13 +5,15 @@ import { listRepsForAdmin, createRepForAdmin } from "@/lib/admin-reps";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** 営業マン一覧（担当件数・報酬計算つき） */
-export async function GET(): Promise<NextResponse> {
+/** 営業マン一覧（指定月の報酬計算つき） */
+export async function GET(req: Request): Promise<NextResponse> {
   if (!(await isAdmin())) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
-  const reps = await listRepsForAdmin();
-  return NextResponse.json({ ok: true, reps });
+  const month = new URL(req.url).searchParams.get("month") || undefined;
+  const monthMatch = month && /^\d{4}-\d{2}$/.test(month) ? month : undefined;
+  const reps = await listRepsForAdmin(monthMatch);
+  return NextResponse.json({ ok: true, reps, month: reps[0]?.month ?? monthMatch });
 }
 
 /** 営業マンを新規作成（専用リンク発行） */

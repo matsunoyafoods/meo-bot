@@ -14,9 +14,23 @@ export interface AdminRepView {
   code: string;
   referral_url: string | null;
   active_contracts: number; // 稼働中(status=active)の担当店舗数
-  one_time_total: number; // 一時報酬の累計対象額（1〜20件 × $20）
-  recurring_monthly: number; // 継続報酬の月額（21件目以降 × $5）
+  month: string; // 計算対象月 (YYYY-MM)
+  one_time_count: number; // 今月の新規(1〜20件目)の件数
+  one_time_amount: number; // 今月の一時報酬額
+  recurring_count: number; // 21件目以降で稼働中の件数
+  recurring_amount: number; // 今月の継続報酬額
+  month_total: number; // 今月の支払額（一時＋継続）
   created_at: string;
+}
+
+export function currentMonth(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthBounds(month: string): { start: number; end: number } {
+  const [y, m] = month.split("-").map(Number);
+  return { start: Date.UTC(y, m - 1, 1), end: Date.UTC(y, m, 1) };
 }
 
 function shortCode(): string {
@@ -32,35 +46,63 @@ async function username(): Promise<string> {
   }
 }
 
-/** 営業マン一覧（担当件数・報酬計算つき） */
-export async function listRepsForAdmin(): Promise<AdminRepView[]> {
+type StorePick = Pick<StoreRow, "sales_rep_id" | "status" | "created_at">;
+
+/** 営業マン一覧（指定月の報酬計算つき） */
+export async function listRepsForAdmin(month = currentMonth()): Promise<AdminRepView[]> {
   const supabase = createSupabaseAdminClient();
   const [{ data: reps }, { data: stores }] = await Promise.all([
     supabase.from("sales_reps").select("*").order("created_at", { ascending: false }).returns<SalesRepRow[]>(),
-    supabase.from("stores").select("sales_rep_id,status").returns<Pick<StoreRow, "sales_rep_id" | "status">[]>(),
+    supabase.from("stores").select("sales_rep_id,status,created_at").returns<StorePick[]>(),
   ]);
 
-  // 稼働中(active)の担当店舗数を集計
-  const counts = new Map<string, number>();
+  const { start, end } = monthBounds(month);
+
+  // 営業マンごとに担当店舗を登録日順（契約順）でまとめる
+  const byRep = new Map<string, StorePick[]>();
   for (const s of stores ?? []) {
-    if (s.sales_rep_id && s.status === "active") {
-      counts.set(s.sales_rep_id, (counts.get(s.sales_rep_id) ?? 0) + 1);
-    }
+    if (!s.sales_rep_id) continue;
+    const arr = byRep.get(s.sales_rep_id) ?? [];
+    arr.push(s);
+    byRep.set(s.sales_rep_id, arr);
   }
 
   const uname = await username();
   return (reps ?? []).map((r) => {
-    const n = counts.get(r.id) ?? 0;
-    const oneTimeCount = Math.min(n, THRESHOLD);
-    const recurringCount = Math.max(0, n - THRESHOLD);
+    const list = (byRep.get(r.id) ?? []).sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+
+    let oneTimeCount = 0; // 今月の新規(1〜20件目)
+    let recurringCount = 0; // 21件目以降で稼働中
+    let active = 0;
+    list.forEach((s, i) => {
+      const rank = i + 1; // 契約順(1始まり)
+      const ts = new Date(s.created_at).getTime();
+      if (s.status === "active") active++;
+      if (rank <= THRESHOLD) {
+        // 1〜20件目: 登録月が対象月なら一時報酬
+        if (ts >= start && ts < end) oneTimeCount++;
+      } else {
+        // 21件目以降: 稼働中 & 対象月末までに契約済みなら継続報酬
+        if (s.status === "active" && ts < end) recurringCount++;
+      }
+    });
+
+    const oneTimeAmount = oneTimeCount * ONE_TIME_BONUS;
+    const recurringAmount = recurringCount * RECURRING_BONUS;
     return {
       id: r.id,
       name: r.name,
       code: r.code,
       referral_url: uname ? `https://t.me/${uname}?start=rep_${r.code}` : null,
-      active_contracts: n,
-      one_time_total: oneTimeCount * ONE_TIME_BONUS,
-      recurring_monthly: recurringCount * RECURRING_BONUS,
+      active_contracts: active,
+      month,
+      one_time_count: oneTimeCount,
+      one_time_amount: oneTimeAmount,
+      recurring_count: recurringCount,
+      recurring_amount: recurringAmount,
+      month_total: oneTimeAmount + recurringAmount,
       created_at: r.created_at,
     };
   });
@@ -83,8 +125,12 @@ export async function createRepForAdmin(name: string): Promise<AdminRepView> {
     code: data.code,
     referral_url: uname ? `https://t.me/${uname}?start=rep_${data.code}` : null,
     active_contracts: 0,
-    one_time_total: 0,
-    recurring_monthly: 0,
+    month: currentMonth(),
+    one_time_count: 0,
+    one_time_amount: 0,
+    recurring_count: 0,
+    recurring_amount: 0,
+    month_total: 0,
     created_at: data.created_at,
   };
 }
