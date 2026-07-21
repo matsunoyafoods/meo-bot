@@ -6,6 +6,7 @@ import {
   buildAndSendWeeklyReport,
   buildAndSendMonthlyReport,
 } from "@/lib/workflows/kpi-report";
+import { linkPendingStores } from "@/lib/workflows/reconcile";
 import type { StoreRow } from "@/lib/supabase/database.types";
 
 export const runtime = "nodejs";
@@ -31,6 +32,14 @@ export async function GET(req: Request): Promise<NextResponse> {
   const doArticle = weekday === 1 || weekday === 3 || weekday === 5;
   const doWeekly = weekday === 1;
   const doMonthly = dayOfMonth === 1;
+
+  // GBPクォータ承認後、連携済みだが未接続の店舗を毎日自動で接続＋通知
+  let reconcile = { checked: 0, linked: 0 };
+  try {
+    reconcile = await linkPendingStores();
+  } catch (e) {
+    console.error("[cron/daily] reconcile", e);
+  }
 
   const supabase = createSupabaseAdminClient();
   const { data: stores } = await supabase
@@ -77,6 +86,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     weekday,
     dayOfMonth,
     ran: { doArticle, doWeekly, doMonthly },
+    reconcile,
     results,
   });
 }

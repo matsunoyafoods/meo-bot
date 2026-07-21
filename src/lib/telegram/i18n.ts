@@ -80,6 +80,8 @@ const ja: Dict = {
   menu_diagnose: "🔍 MEO診断",
   menu_reviews: "📮 未返信口コミ",
   menu_settings: "⚙️ 設定",
+  connection_ready:
+    "🎉 店舗データの接続が完了しました！Googleの承認が下り、口コミ返信・記事投稿・週報がご利用いただけます。\n\n/menu からメニューを開けます。",
 };
 
 const en: Dict = {
@@ -155,6 +157,8 @@ const en: Dict = {
   menu_diagnose: "🔍 MEO check",
   menu_reviews: "📮 Unreplied reviews",
   menu_settings: "⚙️ Settings",
+  connection_ready:
+    "🎉 Your store is now connected! Google approved access, so review replies, posts and weekly reports are ready to use.\n\nOpen the menu with /menu.",
 };
 
 const km: Dict = {
@@ -230,6 +234,8 @@ const km: Dict = {
   menu_diagnose: "🔍 វិនិច្ឆ័យ MEO",
   menu_reviews: "📮 មតិមិនទាន់ឆ្លើយតប",
   menu_settings: "⚙️ ការកំណត់",
+  connection_ready:
+    "🎉 ហាងរបស់អ្នកបានភ្ជាប់រួចរាល់! Google បានអនុម័ត ដូច្នេះការឆ្លើយតបមតិ ការបង្ហោះ និងរបាយការណ៍ប្រចាំសប្តាហ៍ អាចប្រើបានហើយ។\n\nបើកម៉ឺនុយដោយ /menu។",
 };
 
 const zh: Dict = {
@@ -304,6 +310,8 @@ const zh: Dict = {
   menu_diagnose: "🔍 MEO 诊断",
   menu_reviews: "📮 未回复评论",
   menu_settings: "⚙️ 设置",
+  connection_ready:
+    "🎉 您的店铺已连接完成！Google 已批准访问，评论回复、动态发布和周报现已可用。\n\n使用 /menu 打开菜单。",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };
