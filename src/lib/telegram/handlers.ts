@@ -157,13 +157,14 @@ async function cmdStart(
   //   ① まず母国語を選んでもらう（以降のメッセージを母国語で表示するため）
   //   ② Google 連携ボタン付きのウェルカム
   //   ③ 初期設定メニュー（言語・ジャンル・キーワード・客単価）
-  // ※ メインメニューは、設定・連携が済んだ店舗にだけ表示する
+  //   ④ メインメニュー（タップ操作。グループには Menu ボタンが無いので必ず出す）
   if (!store.onboarded) {
     await sendLanguageChooser(chatId, lang);
     await sendMessage(chatId, t(lang, "welcome"), [
       [{ text: t(lang, "connect_google"), url }],
     ]);
     await sendSettingsMenu(chatId, lang, t(lang, "setup_prompt"));
+    await sendMainMenu(chatId, lang);
     return;
   }
 
@@ -457,11 +458,21 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     return sendSettingsMenu(chatId, store.owner_lang);
   }
   if (data === "menu_post") {
+    // 投稿はGoogle連携が必要
+    if (!store.onboarded) {
+      await answerCallbackQuery(cb.id);
+      return void sendMessage(chatId, t(store.owner_lang, "not_connected"));
+    }
     await setOwnerState(store.id, "awaiting_post_keyword", {});
     await answerCallbackQuery(cb.id);
     return void sendMessage(chatId, t(store.owner_lang, "ask_post_keyword"));
   }
   if (data === "menu_diagnose" || data === "menu_reviews") {
+    // 口コミ取得はGoogle連携が必要。MEO診断は連携前でもPlaces検索で動く。
+    if (data === "menu_reviews" && !store.onboarded) {
+      await answerCallbackQuery(cb.id);
+      return void sendMessage(chatId, t(store.owner_lang, "not_connected"));
+    }
     await answerCallbackQuery(cb.id);
     try {
       if (data === "menu_diagnose") await runDiagnosis(store);
