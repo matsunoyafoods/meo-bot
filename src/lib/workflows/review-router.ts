@@ -109,6 +109,7 @@ export async function notifyOwnerLowStar(
       { text: t(lang, "btn_send"), callback_data: `rev_send:${review.id}` },
       { text: t(lang, "btn_edit"), callback_data: `rev_edit:${review.id}` },
     ],
+    [{ text: t(lang, "btn_skip_review"), callback_data: `rev_skip:${review.id}` }],
   ]);
 }
 

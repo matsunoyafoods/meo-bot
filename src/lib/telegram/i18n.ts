@@ -62,6 +62,19 @@ const ja: Dict = {
   group_linked:
     "✅ このグループを店舗「{name}」のレポート配信先に登録しました。週次・月次レポートがここに届きます。",
   group_invalid: "招待リンクが無効です。管理者に新しいグループ用リンクをご確認ください。",
+  backlog_none: "未返信の口コミはありません。すべて対応済みです。",
+  backlog_summary:
+    "📮 未返信の口コミが {total} 件あります。\n⭐ 4-5★: {high} 件\n⚠️ 1-3★: {low} 件\n\nどちらから対応しますか？",
+  backlog_btn_high: "⭐ 4-5★ {n}件 の返信案を作成",
+  backlog_btn_low: "⚠️ 1-3★ {n}件 を確認",
+  backlog_high_ready:
+    "⭐ 4-5★ の返信案を {n} 件作成しました。内容を確認して、よければ「まとめて送信」を押してください。",
+  backlog_btn_sendall: "🟢 まとめて送信",
+  backlog_btn_oneby: "✍️ 1件ずつ確認する",
+  backlog_sent: "✅ {n} 件の返信を送信しました。",
+  backlog_low_intro: "⚠️ 1-3★ を1件ずつ表示します（{n}件）。それぞれ確認して送信してください。",
+  backlog_more: "残り {n} 件あります。もう一度 /reviews で続けられます。",
+  btn_skip_review: "⏭ スキップ",
 };
 
 const en: Dict = {
@@ -119,6 +132,19 @@ const en: Dict = {
   group_linked:
     "✅ This group is now a report channel for \"{name}\". Weekly and monthly reports will arrive here.",
   group_invalid: "Invalid invite link. Please ask the admin for a new group link.",
+  backlog_none: "No unreplied reviews. You're all caught up.",
+  backlog_summary:
+    "📮 You have {total} unreplied reviews.\n⭐ 4-5★: {high}\n⚠️ 1-3★: {low}\n\nWhich would you like to handle?",
+  backlog_btn_high: "⭐ Draft replies for {n} × 4-5★",
+  backlog_btn_low: "⚠️ Review {n} × 1-3★",
+  backlog_high_ready:
+    "⭐ Drafted {n} replies for 4-5★. Review them and tap \"Send all\" if they look good.",
+  backlog_btn_sendall: "🟢 Send all",
+  backlog_btn_oneby: "✍️ Review one by one",
+  backlog_sent: "✅ Sent {n} replies.",
+  backlog_low_intro: "⚠️ Showing 1-3★ one by one ({n}). Please review and send each.",
+  backlog_more: "{n} left. Run /reviews again to continue.",
+  btn_skip_review: "⏭ Skip",
 };
 
 const km: Dict = {
@@ -176,6 +202,19 @@ const km: Dict = {
   group_linked:
     "✅ ក្រុមនេះត្រូវបានចុះឈ្មោះជាកន្លែងទទួលរបាយការណ៍សម្រាប់ហាង «{name}»។ របាយការណ៍ប្រចាំសប្តាហ៍/ខែ នឹងមកដល់ទីនេះ។",
   group_invalid: "តំណអញ្ជើញមិនត្រឹមត្រូវ។ សូមសុំតំណក្រុមថ្មីពីអ្នកគ្រប់គ្រង។",
+  backlog_none: "គ្មានមតិដែលមិនទាន់ឆ្លើយតបទេ។ អ្នកបានដោះស្រាយអស់ហើយ។",
+  backlog_summary:
+    "📮 មានមតិមិនទាន់ឆ្លើយតប {total} ។\n⭐ 4-5★: {high}\n⚠️ 1-3★: {low}\n\nចង់ដោះស្រាយមួយណាមុន?",
+  backlog_btn_high: "⭐ បង្កើតការឆ្លើយតប {n} × 4-5★",
+  backlog_btn_low: "⚠️ ពិនិត្យ {n} × 1-3★",
+  backlog_high_ready:
+    "⭐ បានបង្កើតការឆ្លើយតប {n} សម្រាប់ 4-5★។ ពិនិត្យ ហើយចុច «ផ្ញើទាំងអស់» បើត្រឹមត្រូវ។",
+  backlog_btn_sendall: "🟢 ផ្ញើទាំងអស់",
+  backlog_btn_oneby: "✍️ ពិនិត្យម្តងមួយ",
+  backlog_sent: "✅ បានផ្ញើការឆ្លើយតប {n} ។",
+  backlog_low_intro: "⚠️ បង្ហាញ 1-3★ ម្តងមួយ ({n})។ សូមពិនិត្យ ហើយផ្ញើម្តងមួយ។",
+  backlog_more: "នៅសល់ {n} ។ ចុច /reviews ម្តងទៀតដើម្បីបន្ត។",
+  btn_skip_review: "⏭ រំលង",
 };
 
 const zh: Dict = {
@@ -232,6 +271,19 @@ const zh: Dict = {
   group_linked:
     "✅ 本群已登记为店铺「{name}」的报告接收群。周报和月报将发送到这里。",
   group_invalid: "邀请链接无效。请向管理员索取新的群链接。",
+  backlog_none: "没有未回复的评论，全部已处理。",
+  backlog_summary:
+    "📮 有 {total} 条未回复的评论。\n⭐ 4-5★: {high}\n⚠️ 1-3★: {low}\n\n先处理哪一类？",
+  backlog_btn_high: "⭐ 为 {n} 条 4-5★ 生成回复",
+  backlog_btn_low: "⚠️ 查看 {n} 条 1-3★",
+  backlog_high_ready:
+    "⭐ 已为 4-5★ 生成 {n} 条回复。请查看，若无问题请点「全部发送」。",
+  backlog_btn_sendall: "🟢 全部发送",
+  backlog_btn_oneby: "✍️ 逐条确认",
+  backlog_sent: "✅ 已发送 {n} 条回复。",
+  backlog_low_intro: "⚠️ 逐条显示 1-3★（{n} 条）。请逐条查看并发送。",
+  backlog_more: "还剩 {n} 条。再次运行 /reviews 可继续。",
+  btn_skip_review: "⏭ 跳过",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };

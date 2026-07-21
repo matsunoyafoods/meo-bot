@@ -30,6 +30,13 @@ import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
 import { publishPost, proposeArticle, reviseArticlePost } from "@/lib/workflows/article";
 import { runDiagnosis } from "@/lib/workflows/diagnose";
+import {
+  startBacklog,
+  generateHighStarDrafts,
+  bulkSendHighStar,
+  highStarOneByOne,
+  pushLowStarQueue,
+} from "@/lib/workflows/backlog";
 
 /** webhook のエントリーポイント */
 export async function handleUpdate(update: TgUpdate): Promise<void> {
@@ -63,6 +70,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (text.startsWith("/settings")) return cmdSettings(chatId);
   if (text.startsWith("/post")) return cmdPost(chatId);
   if (text.startsWith("/diagnose")) return cmdDiagnose(chatId);
+  if (text.startsWith("/reviews")) return cmdReviews(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
@@ -150,6 +158,18 @@ async function cmdDiagnose(chatId: number): Promise<void> {
     await runDiagnosis(store);
   } catch (e) {
     console.error("[telegram] diagnose error", e);
+    await sendMessage(chatId, t(store.owner_lang, "error"));
+  }
+}
+
+/* ---------- /reviews : 未返信口コミの一括処理（バックログ） ---------- */
+async function cmdReviews(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  try {
+    await startBacklog(store);
+  } catch (e) {
+    console.error("[telegram] backlog error", e);
     await sendMessage(chatId, t(store.owner_lang, "error"));
   }
 }
@@ -332,9 +352,31 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     return void sendMessage(chatId, t(store.owner_lang, "ask_keywords"));
   }
 
-  // --- 口コミ: 送信 / 編集 ---
+  // --- バックログ: 未返信口コミの一括処理 ---
+  if (data === "bk_high" || data === "bk_low" || data === "bk_sendall" || data === "bk_one") {
+    await answerCallbackQuery(cb.id);
+    try {
+      if (data === "bk_high") await generateHighStarDrafts(store);
+      else if (data === "bk_low") await pushLowStarQueue(store);
+      else if (data === "bk_sendall") await bulkSendHighStar(store);
+      else await highStarOneByOne(store);
+    } catch (e) {
+      console.error("[telegram] backlog cb error", e);
+      await sendMessage(chatId, t(store.owner_lang, "error"));
+    }
+    return;
+  }
+
+  // --- 口コミ: 送信 / 編集 / スキップ ---
   if (data.startsWith("rev_send:")) {
     return sendReviewNow(store, data.split(":")[1], cb);
+  }
+  if (data.startsWith("rev_skip:")) {
+    const supabase = createSupabaseAdminClient();
+    await supabase.from("reviews").update({ status: "skipped" }).eq("id", data.split(":")[1]);
+    await answerCallbackQuery(cb.id, t(store.owner_lang, "skipped"));
+    if (cb.message) await stripButtons(chatId, cb.message.message_id, cb.message.text);
+    return;
   }
   if (data.startsWith("rev_edit:")) {
     const reviewId = data.split(":")[1];

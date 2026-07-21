@@ -22,6 +22,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     { command: "start", description: "Start / Connect Google" },
     { command: "settings", description: "Settings (language, genre, keywords, avg. spend)" },
     { command: "post", description: "Create a post (from a keyword)" },
+    { command: "reviews", description: "Reply to unreplied reviews (bulk)" },
     { command: "diagnose", description: "MEO diagnosis (Google Maps suggestions)" },
   ]);
 
