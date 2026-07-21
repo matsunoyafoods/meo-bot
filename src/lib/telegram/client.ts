@@ -11,31 +11,56 @@ export interface InlineButton {
 
 export type InlineKeyboard = InlineButton[][];
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 async function call<T = unknown>(method: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API()}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as { ok: boolean; result?: T; description?: string };
-  if (!json.ok) {
-    throw new Error(`Telegram ${method} failed: ${json.description ?? res.status}`);
+  // Telegramへの接続は稀に ETIMEDOUT で失敗するので、ネットワーク失敗時のみ数回リトライする。
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${API()}/${method}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      // 接続失敗（fetch failed / ETIMEDOUT など）→ 少し待って再試行
+      lastErr = e;
+      if (attempt < 2) await sleep(400 * (attempt + 1));
+      continue;
+    }
+    const json = (await res.json()) as { ok: boolean; result?: T; description?: string };
+    if (!json.ok) {
+      // API側のエラー（400等）はリトライしても直らないので即throw
+      throw new Error(`Telegram ${method} failed: ${json.description ?? res.status}`);
+    }
+    return json.result as T;
   }
-  return json.result as T;
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`Telegram ${method} failed after retries`);
 }
 
-export function sendMessage(
+export async function sendMessage(
   chatId: number,
   text: string,
   keyboard?: InlineKeyboard,
 ): Promise<{ message_id: number }> {
-  return call("sendMessage", {
-    chat_id: chatId,
-    text,
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-    ...(keyboard ? { reply_markup: { inline_keyboard: keyboard } } : {}),
-  });
+  // 送信は「投げっぱなし(void)」で呼ばれる箇所が多いため、失敗しても例外を投げず
+  // ログに残して握りつぶす（未処理エラーで関数がクラッシュするのを防ぐ）。
+  try {
+    return await call("sendMessage", {
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      ...(keyboard ? { reply_markup: { inline_keyboard: keyboard } } : {}),
+    });
+  } catch (e) {
+    console.error("[telegram] sendMessage failed", e);
+    return { message_id: 0 };
+  }
 }
 
 export function editMessageText(
