@@ -93,6 +93,7 @@ export function setMyCommands(commands: BotCommand[]): Promise<unknown> {
 /* --------- Telegram Update の最小型 --------- */
 export interface TgUser {
   id: number;
+  is_bot?: boolean;
   first_name?: string;
   language_code?: string;
 }
@@ -107,6 +108,8 @@ export interface TgMessage {
   from?: TgUser;
   chat: TgChat;
   text?: string;
+  /** グループにメンバー（Bot含む）が追加されたときのサービスメッセージ */
+  new_chat_members?: TgUser[];
 }
 export interface TgCallbackQuery {
   id: string;

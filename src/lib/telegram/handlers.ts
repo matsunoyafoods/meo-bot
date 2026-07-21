@@ -58,16 +58,24 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
 async function handleMessage(msg: TgMessage): Promise<void> {
   const chatId = msg.chat.id;
   const text = (msg.text ?? "").trim();
+  const param = text.split(/\s+/)[1] ?? "";
   const chatType = msg.chat.type ?? "private";
   const isGroup = chatType === "group" || chatType === "supergroup";
 
-  // グループ内では、招待トークン付き /start（レポート配信先の登録）だけ処理
-  if (isGroup) {
-    if (text.startsWith("/start")) return cmdStartGroup(msg, text);
-    return;
+  // Botがグループに追加された直後 → 設定開始を案内（言語未確定なので英/日で短く）
+  if (isGroup && msg.new_chat_members?.some((m) => m.is_bot)) {
+    return void sendMessage(
+      chatId,
+      "👋 Send /start in this group to set up this store.\nこのグループで /start を送ると、この店舗の設定を始められます。",
+    );
   }
 
-  if (text.startsWith("/start")) return cmdStart(chatId, text);
+  // コマンド（DM・グループ共通で処理。グループは chat_id = グループID の店舗として扱う）
+  if (text.startsWith("/start")) {
+    // グループ + 招待トークン → 既存店舗のレポート配信先として登録（従来動作）
+    if (isGroup && param.startsWith("invite_")) return cmdStartGroup(msg, text);
+    return cmdStart(chatId, text);
+  }
   if (text.startsWith("/settings")) return cmdSettings(chatId);
   if (text.startsWith("/post")) return cmdPost(chatId);
   if (text.startsWith("/diagnose")) return cmdDiagnose(chatId);
@@ -76,7 +84,11 @@ async function handleMessage(msg: TgMessage): Promise<void> {
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
-  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  if (!store) {
+    // グループでは無関係な発言に反応しない（DMのみ案内）
+    if (isGroup) return;
+    return void sendMessage(chatId, t("ja", "not_connected"));
+  }
 
   const state = await getOwnerState(store.id);
   if (state?.mode === "awaiting_review_edit") {
@@ -97,7 +109,8 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (state?.mode === "awaiting_keywords") {
     return handleKeywordsText(store, text);
   }
-  // 状態が無ければ軽くヘルプ
+  // 状態が無ければ軽くヘルプ（グループでは雑談に反応しないため何もしない）
+  if (isGroup) return;
   await sendMessage(chatId, t(store.owner_lang, "settings_title"));
 }
 
