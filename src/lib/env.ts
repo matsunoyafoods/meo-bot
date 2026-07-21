@@ -43,4 +43,8 @@ export const env = {
 
   // MEO診断: Places API (New) 用のAPIキー
   googleMapsApiKey: () => required("GOOGLE_MAPS_API_KEY"),
+
+  // 運用アラートの通知先（管理者=TomのTelegram chat_id）。
+  // 未設定なら通知は送らない。/id コマンドで自分のIDを確認できる。
+  adminTelegramChatId: () => optional("ADMIN_TELEGRAM_CHAT_ID", ""),
 } as const;

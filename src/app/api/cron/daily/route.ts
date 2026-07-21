@@ -7,6 +7,8 @@ import {
   buildAndSendMonthlyReport,
 } from "@/lib/workflows/kpi-report";
 import { linkPendingStores } from "@/lib/workflows/reconcile";
+import { sendMessage } from "@/lib/telegram/client";
+import { env } from "@/lib/env";
 import type { StoreRow } from "@/lib/supabase/database.types";
 
 export const runtime = "nodejs";
@@ -118,6 +120,20 @@ export async function GET(req: Request): Promise<NextResponse> {
       console.warn(
         `[cron/daily] processed ${processed}/${total} stores, deferred ${deferred} to next run (cap=${MAX_STORES_PER_RUN})`,
       );
+      // 管理者(Tom)に自動通知（週1回=月曜だけ。ADMIN_TELEGRAM_CHAT_ID 未設定なら送らない）
+      const adminId = Number(env.adminTelegramChatId());
+      if (doWeekly && Number.isFinite(adminId) && adminId !== 0) {
+        try {
+          await sendMessage(
+            adminId,
+            `⚠️ <b>処理能力の上限サイン</b>\n\n` +
+              `日次処理で ${deferred} 店舗を翌回に回しました（現在の上限: 1回 ${MAX_STORES_PER_RUN} 店舗 / 対象 ${total} 店舗）。\n` +
+              `店舗数が処理能力に近づいています。そろそろ <b>Vercel Pro化</b> または <b>ジョブキュー導入</b> をご検討ください。`,
+          );
+        } catch (e) {
+          console.error("[cron/daily] admin alert failed", e);
+        }
+      }
     }
   }
 

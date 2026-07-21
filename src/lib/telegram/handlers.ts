@@ -78,6 +78,10 @@ async function handleMessage(msg: TgMessage): Promise<void> {
     const chatLabel = msg.chat.title ?? msg.from?.first_name ?? undefined;
     return cmdStart(chatId, text, chatLabel);
   }
+  if (text.startsWith("/id")) {
+    // このチャット（DM or グループ）のIDを返す。管理者通知先の設定などに使う。
+    return void sendMessage(chatId, `chat_id: <code>${chatId}</code>`);
+  }
   if (text.startsWith("/settings")) return cmdSettings(chatId);
   if (text.startsWith("/post")) return cmdPost(chatId);
   if (text.startsWith("/diagnose")) return cmdDiagnose(chatId);
