@@ -26,6 +26,7 @@ import {
 import { buildAuthUrl } from "@/lib/google/oauth";
 import { bindStoreByInvite } from "@/lib/admin-stores";
 import { attributeStoreToRep } from "@/lib/admin-reps";
+import { isStoreUsable } from "@/lib/trial";
 import { replyToReview } from "@/lib/google/business";
 import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
@@ -200,6 +201,7 @@ async function cmdStartGroup(msg: TgMessage, text: string): Promise<void> {
 async function cmdDiagnose(chatId: number): Promise<void> {
   const store = await getStoreByChatId(chatId);
   if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  if (await blockedByTrial(store)) return;
   try {
     await runDiagnosis(store);
   } catch (e) {
@@ -212,6 +214,7 @@ async function cmdDiagnose(chatId: number): Promise<void> {
 async function cmdReviews(chatId: number): Promise<void> {
   const store = await getStoreByChatId(chatId);
   if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  if (await blockedByTrial(store)) return;
   try {
     await startBacklog(store);
   } catch (e) {
@@ -259,9 +262,17 @@ async function sendSettingsMenu(chatId: number, lang: OwnerLang, header?: string
 }
 
 /* ---------- /post : キーワード指定のオンデマンド投稿 ---------- */
+/** 無料期間切れ/停止中なら案内を出して true を返す（機能を止める） */
+async function blockedByTrial(store: StoreRow): Promise<boolean> {
+  if (isStoreUsable(store)) return false;
+  await sendMessage(store.telegram_chat_id!, t(store.owner_lang, "trial_ended"));
+  return true;
+}
+
 async function cmdPost(chatId: number): Promise<void> {
   const store = await getStoreByChatId(chatId);
   if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  if (await blockedByTrial(store)) return;
   await setOwnerState(store.id, "awaiting_post_keyword", {});
   await sendMessage(chatId, t(store.owner_lang, "ask_post_keyword"));
 }
@@ -462,6 +473,11 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     return sendSettingsMenu(chatId, store.owner_lang);
   }
   if (data === "menu_post") {
+    // 無料期間切れ/停止中は機能停止
+    if (!isStoreUsable(store)) {
+      await answerCallbackQuery(cb.id);
+      return void sendMessage(chatId, t(store.owner_lang, "trial_ended"));
+    }
     // 投稿はGoogle連携が必要
     if (!store.onboarded) {
       await answerCallbackQuery(cb.id);
@@ -472,6 +488,11 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     return void sendMessage(chatId, t(store.owner_lang, "ask_post_keyword"));
   }
   if (data === "menu_diagnose" || data === "menu_reviews") {
+    // 無料期間切れ/停止中は機能停止
+    if (!isStoreUsable(store)) {
+      await answerCallbackQuery(cb.id);
+      return void sendMessage(chatId, t(store.owner_lang, "trial_ended"));
+    }
     // 口コミ取得はGoogle連携が必要。MEO診断は連携前でもPlaces検索で動く。
     if (data === "menu_reviews" && !store.onboarded) {
       await answerCallbackQuery(cb.id);

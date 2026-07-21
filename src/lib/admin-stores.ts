@@ -119,7 +119,10 @@ export async function updateStoreForAdmin(
   },
 ): Promise<void> {
   const supabase = createSupabaseAdminClient();
-  await supabase.from("stores").update(patch).eq("id", id);
+  // 利用期限を変更（延長＝再開）したら、予告通知のステージをリセットして再度予告が届くようにする
+  const finalPatch =
+    patch.trial_ends_at !== undefined ? { ...patch, trial_notify_stage: 0 } : patch;
+  await supabase.from("stores").update(finalPatch).eq("id", id);
 }
 
 /** 店舗を削除（関連トークン・口コミ等は cascade で削除） */

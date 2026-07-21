@@ -40,6 +40,8 @@ export interface StoreRow {
   category: string | null;
   keywords: string | null;
   sales_rep_id: string | null;
+  last_cron_at: string | null;
+  trial_notify_stage: number;
   created_at: string;
   updated_at: string;
 }

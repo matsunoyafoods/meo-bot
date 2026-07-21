@@ -82,6 +82,10 @@ const ja: Dict = {
   menu_settings: "⚙️ 設定",
   connection_ready:
     "🎉 店舗データの接続が完了しました！Googleの承認が下り、口コミ返信・記事投稿・週報がご利用いただけます。\n\n/menu からメニューを開けます。",
+  trial_warn:
+    "⏳ 無料期間はあと {days} 日（{date} まで）で終了します。終了後は自動で停止します。継続をご希望の場合は担当者へご連絡ください。",
+  trial_ended:
+    "🔒 無料期間が終了しました。投稿・口コミ返信・MEO診断・レポートは現在停止しています。継続してご利用いただくには担当者へご連絡ください。",
 };
 
 const en: Dict = {
@@ -160,6 +164,10 @@ const en: Dict = {
   menu_settings: "⚙️ Settings",
   connection_ready:
     "🎉 Your store is now connected! Google approved access, so review replies, posts and weekly reports are ready to use.\n\nOpen the menu with /menu.",
+  trial_warn:
+    "⏳ Your free period ends in {days} day(s) — on {date}. After that the bot pauses automatically. Contact us if you'd like to continue.",
+  trial_ended:
+    "🔒 Your free period has ended. Posts, review replies, MEO checks and reports are paused. Contact us to keep using MapBoost.",
 };
 
 const km: Dict = {
@@ -238,6 +246,10 @@ const km: Dict = {
   menu_settings: "⚙️ ការកំណត់",
   connection_ready:
     "🎉 ហាងរបស់អ្នកបានភ្ជាប់រួចរាល់! Google បានអនុម័ត ដូច្នេះការឆ្លើយតបមតិ ការបង្ហោះ និងរបាយការណ៍ប្រចាំសប្តាហ៍ អាចប្រើបានហើយ។\n\nបើកម៉ឺនុយដោយ /menu។",
+  trial_warn:
+    "⏳ រយៈពេលសាកល្បងឥតគិតថ្លៃនឹងបញ្ចប់ក្នុងរយៈពេល {days} ថ្ងៃ (ត្រឹម {date})។ បន្ទាប់មកប្រព័ន្ធនឹងផ្អាកដោយស្វ័យប្រវត្តិ។ សូមទាក់ទងមកយើងបើចង់បន្ត។",
+  trial_ended:
+    "🔒 រយៈពេលសាកល្បងឥតគិតថ្លៃបានបញ្ចប់ហើយ។ ការបង្ហោះ ការឆ្លើយតបមតិ ការវិនិច្ឆ័យ MEO និងរបាយការណ៍ត្រូវបានផ្អាក។ សូមទាក់ទងមកយើងដើម្បីបន្ត។",
 };
 
 const zh: Dict = {
@@ -315,6 +327,10 @@ const zh: Dict = {
   menu_settings: "⚙️ 设置",
   connection_ready:
     "🎉 您的店铺已连接完成！Google 已批准访问，评论回复、动态发布和周报现已可用。\n\n使用 /menu 打开菜单。",
+  trial_warn:
+    "⏳ 免费试用还有 {days} 天结束（截至 {date}）。之后系统将自动暂停。如需继续请联系我们。",
+  trial_ended:
+    "🔒 免费试用已结束。发布、评论回复、MEO 诊断和报告已暂停。如需继续使用请联系我们。",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };

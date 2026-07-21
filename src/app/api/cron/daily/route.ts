@@ -8,6 +8,8 @@ import {
 } from "@/lib/workflows/kpi-report";
 import { linkPendingStores } from "@/lib/workflows/reconcile";
 import { sendMessage } from "@/lib/telegram/client";
+import { t } from "@/lib/telegram/i18n";
+import { trialDaysLeft, trialNotifyTarget, formatTrialDate } from "@/lib/trial";
 import { env } from "@/lib/env";
 import type { StoreRow } from "@/lib/supabase/database.types";
 
@@ -51,6 +53,10 @@ export async function GET(req: Request): Promise<NextResponse> {
   }
 
   const supabase = createSupabaseAdminClient();
+  const nowIso = now.toISOString();
+
+  // --- 無料期間の予告通知 & 自動停止通知（毎日）---
+  const trialNotified = await runTrialNotifications(supabase);
 
   const results: Record<string, string[]> = {};
   let processed = 0;
@@ -59,17 +65,22 @@ export async function GET(req: Request): Promise<NextResponse> {
   // 店舗ごとの処理が必要な日だけ、店舗ループを回す
   const doAny = doArticle || doWeekly || doMonthly;
   if (doAny) {
-    // 対象（onboarded）の総数
+    // 対象: onboarded かつ 利用可能（停止中でなく期限内 or 期限なし）
+    const usableFilter = `trial_ends_at.is.null,trial_ends_at.gt.${nowIso}`;
     const { count: total } = await supabase
       .from("stores")
       .select("id", { count: "exact", head: true })
-      .eq("onboarded", true);
+      .eq("onboarded", true)
+      .eq("status", "active")
+      .or(usableFilter);
 
     // last_cron_at が古い（未処理=NULLが最優先）順に、上限件数だけ取得＝公平ローテーション
     const { data: stores } = await supabase
       .from("stores")
       .select("*")
       .eq("onboarded", true)
+      .eq("status", "active")
+      .or(usableFilter)
       .order("last_cron_at", { ascending: true, nullsFirst: true })
       .limit(MAX_STORES_PER_RUN)
       .returns<StoreRow[]>();
@@ -146,6 +157,61 @@ export async function GET(req: Request): Promise<NextResponse> {
     cap: MAX_STORES_PER_RUN,
     processed,
     deferred,
+    trialNotified,
     results,
   });
+}
+
+/**
+ * 無料期間の予告通知（7日前/3日前/前日）と終了通知を、二重送信なく配信する。
+ * 期限を延長（7日超先）した店舗は予告ステージをリセットする。
+ */
+async function runTrialNotifications(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+): Promise<number> {
+  let notified = 0;
+  try {
+    const { data: stores } = await supabase
+      .from("stores")
+      .select("*")
+      .not("trial_ends_at", "is", null)
+      .lt("trial_notify_stage", 4)
+      .returns<StoreRow[]>();
+
+    for (const store of stores ?? []) {
+      if (!store.telegram_chat_id || !store.trial_ends_at) continue;
+      const daysLeft = trialDaysLeft(store);
+      const stage = store.trial_notify_stage ?? 0;
+
+      // 期限を先に延ばした（7日超先）→ 予告をやり直せるようリセット
+      if (daysLeft !== null && daysLeft > 7) {
+        if (stage !== 0) {
+          await supabase.from("stores").update({ trial_notify_stage: 0 }).eq("id", store.id);
+        }
+        continue;
+      }
+
+      const target = trialNotifyTarget(daysLeft);
+      if (target <= stage) continue;
+
+      const lang = store.owner_lang;
+      const msg =
+        target === 4
+          ? t(lang, "trial_ended")
+          : t(lang, "trial_warn", {
+              days: Math.max(0, daysLeft ?? 0),
+              date: formatTrialDate(store.trial_ends_at),
+            });
+      try {
+        await sendMessage(store.telegram_chat_id, msg);
+      } catch (e) {
+        console.error(`[cron/daily] trial notify ${store.id}`, e);
+      }
+      await supabase.from("stores").update({ trial_notify_stage: target }).eq("id", store.id);
+      notified++;
+    }
+  } catch (e) {
+    console.error("[cron/daily] trial pass", e);
+  }
+  return notified;
 }
