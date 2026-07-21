@@ -16,14 +16,21 @@ export async function getStoreByChatId(chatId: number): Promise<StoreRow | null>
   return data ?? null;
 }
 
-/** /start 時: chat に紐づく店舗が無ければ作る */
+/** 新規店舗のデフォルト無料期間（日数）。招待/紹介リンク経由でなくても付与する。 */
+const DEFAULT_TRIAL_DAYS = 60;
+
+/** /start 時: chat に紐づく店舗が無ければ作る（無料期間つき） */
 export async function ensureStoreForChat(chatId: number): Promise<StoreRow> {
   const existing = await getStoreByChatId(chatId);
   if (existing) return existing;
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("stores")
-    .insert({ telegram_chat_id: chatId, owner_lang: "en" })
+    .insert({
+      telegram_chat_id: chatId,
+      owner_lang: "en",
+      trial_ends_at: new Date(Date.now() + DEFAULT_TRIAL_DAYS * 86_400_000).toISOString(),
+    })
     .select("*")
     .single<StoreRow>();
   if (error || !data) throw new Error(`ensureStoreForChat failed: ${error?.message}`);
