@@ -25,6 +25,7 @@ import {
 } from "@/lib/repo";
 import { buildAuthUrl } from "@/lib/google/oauth";
 import { bindStoreByInvite } from "@/lib/admin-stores";
+import { attributeStoreToRep } from "@/lib/admin-reps";
 import { replyToReview } from "@/lib/google/business";
 import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
@@ -113,6 +114,12 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   }
   // 招待が無効/未指定なら通常フロー（chat に紐づく店舗を用意）
   if (!store) store = await ensureStoreForChat(chatId);
+
+  // "/start rep_<code>" : 営業マン専用リンク → 担当を自動紐づけ（初回のみ）
+  if (param.startsWith("rep_")) {
+    await attributeStoreToRep(store, param.slice("rep_".length));
+    viaInvite = true; // 初期設定メニューを表示
+  }
   const lang = store.owner_lang;
 
   // OAuth state を発行して chat と紐づけ

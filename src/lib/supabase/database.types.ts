@@ -39,8 +39,16 @@ export interface StoreRow {
   status: "active" | "suspended";
   category: string | null;
   keywords: string | null;
+  sales_rep_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SalesRepRow {
+  id: string;
+  name: string;
+  code: string;
+  created_at: string;
 }
 export type StoreInsert = Partial<StoreRow> & { telegram_chat_id?: number | null };
 export type StoreUpdate = Partial<StoreRow>;
