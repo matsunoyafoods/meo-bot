@@ -36,6 +36,11 @@ export const env = {
 
   adminPassword: () => required("ADMIN_PASSWORD"),
 
+  // Googleトークン等の機微データをアプリ側で暗号化する鍵。
+  // 未設定でもアプリは動く（暗号化は無効・平文のまま）が、本番では必ず設定する。
+  // ※一度設定したら変更・削除しないこと（既存の暗号化データが復号できなくなる）。
+  encryptionKey: () => optional("ENCRYPTION_KEY", ""),
+
   // MEO診断: Places API (New) 用のAPIキー
   googleMapsApiKey: () => required("GOOGLE_MAPS_API_KEY"),
 } as const;

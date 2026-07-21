@@ -1,6 +1,7 @@
 import { OAuth2Client } from "google-auth-library";
 import { env } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { encryptSecret, decryptSecret, isEncrypted } from "@/lib/crypto";
 import type { GoogleTokenRow } from "@/lib/supabase/database.types";
 
 /**
@@ -43,9 +44,9 @@ export async function exchangeCodeAndStore(
   const supabase = createSupabaseAdminClient();
   const row: Partial<GoogleTokenRow> = {
     store_id: storeId,
-    access_token: tokens.access_token ?? "",
+    access_token: encryptSecret(tokens.access_token ?? ""),
     // refresh_token は初回同意時のみ返る。既存があれば維持する。
-    ...(tokens.refresh_token ? { refresh_token: tokens.refresh_token } : {}),
+    ...(tokens.refresh_token ? { refresh_token: encryptSecret(tokens.refresh_token) } : {}),
     scope: tokens.scope ?? GOOGLE_SCOPES.join(" "),
     token_type: tokens.token_type ?? "Bearer",
     expiry: new Date(tokens.expiry_date ?? Date.now() + 3300 * 1000).toISOString(),
@@ -69,17 +70,28 @@ export async function getFreshAccessToken(storeId: string): Promise<string> {
     throw new Error(`No Google token for store ${storeId}`);
   }
 
+  // 保存値は暗号化されている場合がある（平文の旧データはそのまま返る）
+  const accessToken = decryptSecret(data.access_token ?? "");
+  const refreshToken = data.refresh_token ? decryptSecret(data.refresh_token) : "";
+
   const notExpired = new Date(data.expiry).getTime() - 60_000 > Date.now();
-  if (notExpired && data.access_token) {
-    return data.access_token;
+  if (notExpired && accessToken) {
+    // 旧・平文の refresh_token が残っていれば、この機会に暗号化へ移行しておく
+    if (data.refresh_token && !isEncrypted(data.refresh_token)) {
+      await supabase
+        .from("google_tokens")
+        .update({ refresh_token: encryptSecret(refreshToken) })
+        .eq("store_id", storeId);
+    }
+    return accessToken;
   }
 
-  if (!data.refresh_token) {
+  if (!refreshToken) {
     throw new Error(`Access token expired and no refresh_token for store ${storeId}`);
   }
 
   const client = oauthClient();
-  client.setCredentials({ refresh_token: data.refresh_token });
+  client.setCredentials({ refresh_token: refreshToken });
   const { credentials } = await client.refreshAccessToken();
 
   const newToken = credentials.access_token;
@@ -88,7 +100,9 @@ export async function getFreshAccessToken(storeId: string): Promise<string> {
   await supabase
     .from("google_tokens")
     .update({
-      access_token: newToken,
+      access_token: encryptSecret(newToken),
+      // 平文だった refresh_token もここで暗号化に揃える
+      refresh_token: encryptSecret(refreshToken),
       expiry: new Date(credentials.expiry_date ?? Date.now() + 3300 * 1000).toISOString(),
     })
     .eq("store_id", storeId);
