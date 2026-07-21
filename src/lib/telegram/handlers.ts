@@ -74,7 +74,9 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (text.startsWith("/start")) {
     // グループ + 招待トークン → 既存店舗のレポート配信先として登録（従来動作）
     if (isGroup && param.startsWith("invite_")) return cmdStartGroup(msg, text);
-    return cmdStart(chatId, text);
+    // 店舗名が空のときの手掛かり: グループ名 → 相手のTelegram名
+    const chatLabel = msg.chat.title ?? msg.from?.first_name ?? undefined;
+    return cmdStart(chatId, text, chatLabel);
   }
   if (text.startsWith("/settings")) return cmdSettings(chatId);
   if (text.startsWith("/post")) return cmdPost(chatId);
@@ -115,7 +117,11 @@ async function handleMessage(msg: TgMessage): Promise<void> {
 }
 
 /* ---------- /start : 店舗作成/招待紐づけ + OAuth URL ---------- */
-async function cmdStart(chatId: number, text = "/start"): Promise<void> {
+async function cmdStart(
+  chatId: number,
+  text = "/start",
+  chatLabel?: string,
+): Promise<void> {
   // "/start invite_<token>" のディープリンクを解釈
   const param = text.split(/\s+/)[1] ?? "";
   let store = null as Awaited<ReturnType<typeof ensureStoreForChat>> | null;
@@ -130,6 +136,15 @@ async function cmdStart(chatId: number, text = "/start"): Promise<void> {
   if (param.startsWith("rep_")) {
     await attributeStoreToRep(store, param.slice("rep_".length));
   }
+
+  // 店舗名が未設定なら、グループ名/相手のTelegram名を仮の店舗名として入れておく
+  // （管理画面で「名称未設定」にならないように。Google連携が済めば正式名で上書きされる）
+  const label = (chatLabel ?? "").trim();
+  if (!store.name && label) {
+    await updateStore(store.id, { name: label });
+    store = { ...store, name: label };
+  }
+
   const lang = store.owner_lang;
 
   // OAuth state を発行して chat と紐づけ
