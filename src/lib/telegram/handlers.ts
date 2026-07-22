@@ -27,6 +27,7 @@ import { buildAuthUrl } from "@/lib/google/oauth";
 import { bindStoreByInvite } from "@/lib/admin-stores";
 import { attributeStoreToRep } from "@/lib/admin-reps";
 import { isStoreUsable } from "@/lib/trial";
+import { createSubscribeUrl, createPortalUrl, stripeConfigured } from "@/lib/stripe";
 import { replyToReview } from "@/lib/google/business";
 import { translateOwnerEditToReply } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
@@ -88,6 +89,8 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (text.startsWith("/diagnose")) return cmdDiagnose(chatId);
   if (text.startsWith("/reviews")) return cmdReviews(chatId);
   if (text.startsWith("/menu")) return cmdMenu(chatId);
+  if (text.startsWith("/subscribe")) return cmdSubscribe(chatId);
+  if (text.startsWith("/manage")) return cmdManage(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
@@ -262,11 +265,65 @@ async function sendSettingsMenu(chatId: number, lang: OwnerLang, header?: string
 }
 
 /* ---------- /post : キーワード指定のオンデマンド投稿 ---------- */
-/** 無料期間切れ/停止中なら案内を出して true を返す（機能を止める） */
+/** 「継続する（お申し込み）」ボタン */
+function subscribeKeyboard(lang: OwnerLang): InlineKeyboard {
+  return [[{ text: t(lang, "subscribe_cta"), callback_data: "subscribe" }]];
+}
+
+/** 無料期間切れ/停止中なら案内＋申込ボタンを出して true を返す（機能を止める） */
 async function blockedByTrial(store: StoreRow): Promise<boolean> {
   if (isStoreUsable(store)) return false;
-  await sendMessage(store.telegram_chat_id!, t(store.owner_lang, "trial_ended"));
+  await sendMessage(
+    store.telegram_chat_id!,
+    t(store.owner_lang, "trial_ended"),
+    subscribeKeyboard(store.owner_lang),
+  );
   return true;
+}
+
+/** お申し込み（Checkout）リンクを送る */
+async function sendSubscribeLink(store: StoreRow): Promise<void> {
+  const chatId = store.telegram_chat_id!;
+  const lang = store.owner_lang;
+  if (!stripeConfigured()) return void sendMessage(chatId, t(lang, "pay_unavailable"));
+  let url: string | null = null;
+  try {
+    url = await createSubscribeUrl(store);
+  } catch (e) {
+    console.error("[telegram] createSubscribeUrl", e);
+  }
+  if (!url) return void sendMessage(chatId, t(lang, "pay_unavailable"));
+  await sendMessage(chatId, t(lang, "pay_link_msg"), [
+    [{ text: t(lang, "pay_link_btn"), url }],
+  ]);
+}
+
+/** 契約管理（解約・カード変更）リンクを送る */
+async function sendManageLink(store: StoreRow): Promise<void> {
+  const chatId = store.telegram_chat_id!;
+  const lang = store.owner_lang;
+  let url: string | null = null;
+  try {
+    url = await createPortalUrl(store);
+  } catch (e) {
+    console.error("[telegram] createPortalUrl", e);
+  }
+  if (!url) return void sendMessage(chatId, t(lang, "manage_unavailable"));
+  await sendMessage(chatId, t(lang, "manage_link_msg"), [
+    [{ text: t(lang, "manage_link_btn"), url }],
+  ]);
+}
+
+async function cmdSubscribe(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  await sendSubscribeLink(store);
+}
+
+async function cmdManage(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
+  await sendManageLink(store);
 }
 
 async function cmdPost(chatId: number): Promise<void> {
@@ -465,6 +522,16 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     await setOwnerState(store.id, "awaiting_keywords", {});
     await answerCallbackQuery(cb.id);
     return void sendMessage(chatId, t(store.owner_lang, "ask_keywords"));
+  }
+
+  // --- 課金（お申し込み・契約管理） ---
+  if (data === "subscribe") {
+    await answerCallbackQuery(cb.id);
+    return sendSubscribeLink(store);
+  }
+  if (data === "manage") {
+    await answerCallbackQuery(cb.id);
+    return sendManageLink(store);
   }
 
   // --- メインメニュー ---

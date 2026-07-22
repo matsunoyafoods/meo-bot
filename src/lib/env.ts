@@ -47,4 +47,9 @@ export const env = {
   // 運用アラートの通知先（管理者=TomのTelegram chat_id）。
   // 未設定なら通知は送らない。/id コマンドで自分のIDを確認できる。
   adminTelegramChatId: () => optional("ADMIN_TELEGRAM_CHAT_ID", ""),
+
+  // Stripe（サブスク課金）。未設定でもアプリは動く（課金機能だけ無効）。
+  stripeSecretKey: () => optional("STRIPE_SECRET_KEY", ""),
+  stripeWebhookSecret: () => optional("STRIPE_WEBHOOK_SECRET", ""),
+  stripePriceId: () => optional("STRIPE_PRICE_ID", ""),
 } as const;

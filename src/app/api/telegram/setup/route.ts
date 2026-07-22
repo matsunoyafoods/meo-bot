@@ -25,6 +25,8 @@ export async function GET(req: Request): Promise<NextResponse> {
     { command: "post", description: "Create a post (from a keyword)" },
     { command: "reviews", description: "Reply to unreplied reviews (bulk)" },
     { command: "diagnose", description: "MEO diagnosis (Google Maps suggestions)" },
+    { command: "subscribe", description: "Subscribe / continue ($49/month)" },
+    { command: "manage", description: "Manage or cancel your subscription" },
   ]);
 
   return NextResponse.json({ ok: true, webhookUrl });

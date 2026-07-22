@@ -86,6 +86,16 @@ const ja: Dict = {
     "⏳ 無料期間はあと {days} 日（{date} まで）で終了します。終了後は自動で停止します。継続をご希望の場合は担当者へご連絡ください。",
   trial_ended:
     "🔒 無料期間が終了しました。投稿・口コミ返信・MEO診断・レポートは現在停止しています。継続してご利用いただくには担当者へご連絡ください。",
+  subscribe_cta: "💳 継続する（お申し込み）",
+  pay_link_msg: "お申し込みはこちらです（月額 $49・カード決済）。下のボタンからお進みください。",
+  pay_link_btn: "💳 お支払いに進む",
+  pay_unavailable: "現在お申し込みを受け付けできません。担当者へご連絡ください。",
+  manage_link_msg: "契約の管理・解約はこちらからできます。",
+  manage_link_btn: "🧾 契約を管理・解約",
+  manage_unavailable: "まだご契約がありません。まずはお申し込みください。",
+  subscribed_ok: "🎉 お申し込みありがとうございます！継続してご利用いただけます。/menu からどうぞ。",
+  payment_ok: "✅ お支払いを確認しました。ありがとうございます。",
+  payment_failed: "⚠️ お支払いに失敗しました。カードをご確認のうえ、/subscribe から再度お試しください。",
 };
 
 const en: Dict = {
@@ -168,6 +178,16 @@ const en: Dict = {
     "⏳ Your free period ends in {days} day(s) — on {date}. After that the bot pauses automatically. Contact us if you'd like to continue.",
   trial_ended:
     "🔒 Your free period has ended. Posts, review replies, MEO checks and reports are paused. Contact us to keep using MapBoost.",
+  subscribe_cta: "💳 Subscribe to continue",
+  pay_link_msg: "Here is your subscription link ($49/month, card). Tap the button below to continue.",
+  pay_link_btn: "💳 Go to payment",
+  pay_unavailable: "Subscription is not available right now. Please contact us.",
+  manage_link_msg: "Manage or cancel your subscription here.",
+  manage_link_btn: "🧾 Manage / cancel",
+  manage_unavailable: "You do not have a subscription yet. Please subscribe first.",
+  subscribed_ok: "🎉 Thanks for subscribing! You can keep using MapBoost. Open /menu.",
+  payment_ok: "✅ Payment confirmed. Thank you!",
+  payment_failed: "⚠️ Your payment failed. Please check your card and try again via /subscribe.",
 };
 
 const km: Dict = {
@@ -250,6 +270,16 @@ const km: Dict = {
     "⏳ រយៈពេលសាកល្បងឥតគិតថ្លៃនឹងបញ្ចប់ក្នុងរយៈពេល {days} ថ្ងៃ (ត្រឹម {date})។ បន្ទាប់មកប្រព័ន្ធនឹងផ្អាកដោយស្វ័យប្រវត្តិ។ សូមទាក់ទងមកយើងបើចង់បន្ត។",
   trial_ended:
     "🔒 រយៈពេលសាកល្បងឥតគិតថ្លៃបានបញ្ចប់ហើយ។ ការបង្ហោះ ការឆ្លើយតបមតិ ការវិនិច្ឆ័យ MEO និងរបាយការណ៍ត្រូវបានផ្អាក។ សូមទាក់ទងមកយើងដើម្បីបន្ត។",
+  subscribe_cta: "💳 ជាវ ដើម្បីបន្ត",
+  pay_link_msg: "នេះជាតំណជាវរបស់អ្នក ($49/ខែ ដោយកាត)។ សូមចុចប៊ូតុងខាងក្រោមដើម្បីបន្ត។",
+  pay_link_btn: "💳 ទៅកាន់ការទូទាត់",
+  pay_unavailable: "មិនអាចទទួលការជាវបានទេនៅពេលនេះ។ សូមទាក់ទងមកយើង។",
+  manage_link_msg: "គ្រប់គ្រង ឬបោះបង់ការជាវនៅទីនេះ។",
+  manage_link_btn: "🧾 គ្រប់គ្រង / បោះបង់",
+  manage_unavailable: "អ្នកមិនទាន់មានការជាវទេ។ សូមជាវជាមុនសិន។",
+  subscribed_ok: "🎉 អរគុណសម្រាប់ការជាវ! អ្នកអាចបន្តប្រើ MapBoost បាន។ បើក /menu។",
+  payment_ok: "✅ បានបញ្ជាក់ការទូទាត់។ សូមអរគុណ!",
+  payment_failed: "⚠️ ការទូទាត់បរាជ័យ។ សូមពិនិត្យកាត ហើយព្យាយាមម្តងទៀតតាម /subscribe។",
 };
 
 const zh: Dict = {
@@ -331,6 +361,16 @@ const zh: Dict = {
     "⏳ 免费试用还有 {days} 天结束（截至 {date}）。之后系统将自动暂停。如需继续请联系我们。",
   trial_ended:
     "🔒 免费试用已结束。发布、评论回复、MEO 诊断和报告已暂停。如需继续使用请联系我们。",
+  subscribe_cta: "💳 订阅以继续",
+  pay_link_msg: "这是您的订阅链接（每月 $49・刷卡）。请点击下方按钮继续。",
+  pay_link_btn: "💳 前往付款",
+  pay_unavailable: "目前无法受理订阅，请联系我们。",
+  manage_link_msg: "在此管理或取消订阅。",
+  manage_link_btn: "🧾 管理 / 取消",
+  manage_unavailable: "您还没有订阅，请先订阅。",
+  subscribed_ok: "🎉 感谢订阅！您可以继续使用 MapBoost。打开 /menu。",
+  payment_ok: "✅ 已确认付款，谢谢！",
+  payment_failed: "⚠️ 付款失败。请检查银行卡后通过 /subscribe 重试。",
 };
 
 const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };

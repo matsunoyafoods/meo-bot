@@ -42,6 +42,8 @@ export interface StoreRow {
   sales_rep_id: string | null;
   last_cron_at: string | null;
   trial_notify_stage: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
   updated_at: string;
 }
