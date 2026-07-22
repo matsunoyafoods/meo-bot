@@ -110,9 +110,28 @@ export interface BotCommand {
   command: string;
   description: string;
 }
-/** コマンドメニュー（/ を押すと出る一覧）を登録 */
-export function setMyCommands(commands: BotCommand[]): Promise<unknown> {
-  return call("setMyCommands", { commands });
+/** setMyCommands のスコープ（省略時は全チャット既定） */
+export type BotCommandScope =
+  | { type: "default" }
+  | { type: "all_private_chats" }
+  | { type: "all_group_chats" }
+  | { type: "all_chat_administrators" };
+
+/**
+ * コマンドメニュー（/ を押すと出る一覧）を登録。
+ * グループには「メニュー」ボタンが無いため、all_group_chats スコープで登録すると
+ * グループで「/」を押したときにコマンド候補が出るようになる。
+ */
+export function setMyCommands(
+  commands: BotCommand[],
+  scope?: BotCommandScope,
+): Promise<unknown> {
+  return call("setMyCommands", scope ? { commands, scope } : { commands });
+}
+
+/** メニューボタン（プライベートチャット左下）を「コマンド一覧」表示にする */
+export function setChatMenuButton(): Promise<unknown> {
+  return call("setChatMenuButton", { menu_button: { type: "commands" } });
 }
 
 /* --------- Telegram Update の最小型 --------- */
