@@ -99,6 +99,8 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (menuAction === "diagnose") return cmdDiagnose(chatId);
   if (menuAction === "reviews") return cmdReviews(chatId);
   if (menuAction === "settings") return cmdSettings(chatId);
+  if (menuAction === "subscribe") return cmdSubscribe(chatId);
+  if (menuAction === "manage") return cmdManage(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
@@ -245,25 +247,30 @@ function isGroupChat(chatId: number): boolean {
   return chatId < 0;
 }
 
-/** 常設リプライキーボードの並び（投稿・診断・口コミ・設定） */
+/** 常設リプライキーボードの並び（投稿・診断・口コミ・設定 ＋ 契約・解約） */
 function menuKeyboardRows(lang: OwnerLang): string[][] {
   return [
     [t(lang, "menu_post"), t(lang, "menu_diagnose")],
     [t(lang, "menu_reviews"), t(lang, "menu_settings")],
+    [t(lang, "subscribe_cta"), t(lang, "manage_link_btn")],
   ];
 }
+
+type MenuAction = "post" | "diagnose" | "reviews" | "settings" | "subscribe" | "manage";
 
 /**
  * リプライキーボードのボタン文字 → メニュー動作を判定。
  * ボタンを押すと「その文字」が通常メッセージで届くため、全言語のラベルと突き合わせる。
  */
-function resolveMenuLabel(text: string): "post" | "diagnose" | "reviews" | "settings" | null {
+function resolveMenuLabel(text: string): MenuAction | null {
   const langs: OwnerLang[] = ["ja", "en", "km", "zh"];
   for (const lang of langs) {
     if (text === t(lang, "menu_post")) return "post";
     if (text === t(lang, "menu_diagnose")) return "diagnose";
     if (text === t(lang, "menu_reviews")) return "reviews";
     if (text === t(lang, "menu_settings")) return "settings";
+    if (text === t(lang, "subscribe_cta")) return "subscribe";
+    if (text === t(lang, "manage_link_btn")) return "manage";
   }
   return null;
 }
