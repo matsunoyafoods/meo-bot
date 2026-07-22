@@ -1,6 +1,20 @@
 import Stripe from "stripe";
 import { env } from "@/lib/env";
-import type { StoreRow } from "@/lib/supabase/database.types";
+import type { StoreRow, OwnerLang } from "@/lib/supabase/database.types";
+
+/** 店舗の言語 → Stripe Checkout の表示言語（クメール語は未対応のため auto） */
+function checkoutLocale(lang: OwnerLang): Stripe.Checkout.SessionCreateParams.Locale {
+  switch (lang) {
+    case "ja":
+      return "ja";
+    case "zh":
+      return "zh";
+    case "en":
+      return "en";
+    default:
+      return "auto";
+  }
+}
 
 let cached: Stripe | null = null;
 
@@ -32,6 +46,7 @@ export async function createSubscribeUrl(store: StoreRow): Promise<string | null
 
   const session = await s.checkout.sessions.create({
     mode: "subscription",
+    locale: checkoutLocale(store.owner_lang),
     line_items: [{ price: env.stripePriceId(), quantity: 1 }],
     client_reference_id: store.id,
     ...(store.stripe_customer_id ? { customer: store.stripe_customer_id } : {}),
