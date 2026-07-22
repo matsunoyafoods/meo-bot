@@ -4,6 +4,7 @@ import {
   answerCallbackQuery,
   editMessageText,
   sendMessage,
+  sendMenuKeyboard,
   type TgUpdate,
   type TgCallbackQuery,
   type TgMessage,
@@ -91,6 +92,13 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (text.startsWith("/menu")) return cmdMenu(chatId);
   if (text.startsWith("/subscribe")) return cmdSubscribe(chatId);
   if (text.startsWith("/manage")) return cmdManage(chatId);
+
+  // 常設リプライキーボードのボタン（＝ボタン文字が普通のメッセージで届く）→ 対応動作へ
+  const menuAction = resolveMenuLabel(text);
+  if (menuAction === "post") return cmdPost(chatId);
+  if (menuAction === "diagnose") return cmdDiagnose(chatId);
+  if (menuAction === "reviews") return cmdReviews(chatId);
+  if (menuAction === "settings") return cmdSettings(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
@@ -232,8 +240,42 @@ async function cmdMenu(chatId: number): Promise<void> {
   await sendMainMenu(chatId, store?.owner_lang ?? "en");
 }
 
+/** グループ判定（Telegramのグループ/スーパーグループの chat_id は負の数） */
+function isGroupChat(chatId: number): boolean {
+  return chatId < 0;
+}
+
+/** 常設リプライキーボードの並び（投稿・診断・口コミ・設定） */
+function menuKeyboardRows(lang: OwnerLang): string[][] {
+  return [
+    [t(lang, "menu_post"), t(lang, "menu_diagnose")],
+    [t(lang, "menu_reviews"), t(lang, "menu_settings")],
+  ];
+}
+
+/**
+ * リプライキーボードのボタン文字 → メニュー動作を判定。
+ * ボタンを押すと「その文字」が通常メッセージで届くため、全言語のラベルと突き合わせる。
+ */
+function resolveMenuLabel(text: string): "post" | "diagnose" | "reviews" | "settings" | null {
+  const langs: OwnerLang[] = ["ja", "en", "km", "zh"];
+  for (const lang of langs) {
+    if (text === t(lang, "menu_post")) return "post";
+    if (text === t(lang, "menu_diagnose")) return "diagnose";
+    if (text === t(lang, "menu_reviews")) return "reviews";
+    if (text === t(lang, "menu_settings")) return "settings";
+  }
+  return null;
+}
+
 /** メインメニュー（投稿・診断・口コミ・設定） */
 async function sendMainMenu(chatId: number, lang: OwnerLang): Promise<void> {
+  // グループ: 入力欄の上に常設されるリプライキーボードを出す（流れても消えない）
+  if (isGroupChat(chatId)) {
+    await sendMenuKeyboard(chatId, t(lang, "menu_title"), menuKeyboardRows(lang));
+    return;
+  }
+  // DM: 従来どおりインラインボタン（DMには左下のメニューボタンもある）
   await sendMessage(chatId, t(lang, "menu_title"), [
     [
       { text: t(lang, "menu_post"), callback_data: "menu_post" },

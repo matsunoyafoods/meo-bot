@@ -63,6 +63,34 @@ export async function sendMessage(
   }
 }
 
+/**
+ * グループ常設メニュー用のリプライキーボードを出す。
+ * inline と違いメッセージが流れても入力欄の上に残り続ける（is_persistent）。
+ * ボタンを押すと「そのボタンの文字」が通常メッセージとして送られてくる。
+ */
+export async function sendMenuKeyboard(
+  chatId: number,
+  text: string,
+  rows: string[][],
+): Promise<{ message_id: number }> {
+  try {
+    return await call("sendMessage", {
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup: {
+        keyboard: rows.map((r) => r.map((label) => ({ text: label }))),
+        resize_keyboard: true,
+        is_persistent: true,
+      },
+    });
+  } catch (e) {
+    console.error("[telegram] sendMenuKeyboard failed", e);
+    return { message_id: 0 };
+  }
+}
+
 export function editMessageText(
   chatId: number,
   messageId: number,
