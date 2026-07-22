@@ -54,7 +54,7 @@ ${storeBlock(store)}
 YOUR TASK:
 1. Detect the language the reviewer used (return an ISO-639-1 code such as "km", "en", "zh", "ja").
 2. Write ONE reply, written IN THE SAME LANGUAGE the reviewer used. Never reply in a different language than the reviewer.
-3. Optimise gently for MEO (local SEO): naturally weave in the store name and, when it fits, the locality and cuisine keywords above. Do NOT keyword-stuff — at most mention the store name once and one keyword. It must read like a warm human reply, not an ad.
+3. Optimise gently for MEO (local SEO): naturally weave in the store name and, when it fits, the locality and cuisine keywords above. Do NOT keyword-stuff — at most mention the store name once and one keyword. It must read like a warm human reply, not an ad. If the store name or locality is written in another script (e.g. Japanese), transliterate it into the reply's language (romanise for English, Khmer script for Khmer — e.g. "天文館" → "Tenmonkan"); never leave Japanese/Chinese characters in a non-Japanese reply. Only mention the locality if it is provided in STORE CONTEXT — never invent one.
 4. Match the tone to the star rating:
    - 4–5 stars: warm, grateful, invite them back. Reference something concrete from their review if possible.
    - 1–3 stars: sincere, apologetic, take responsibility, offer to make it right, avoid being defensive. Do NOT make excuses.
@@ -127,6 +127,7 @@ ${storeBlock(store)}
 IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
 - The MEO keywords and the theme above may be written in the OWNER's own language (for example Japanese). They describe WHAT to write about — they are NOT text to copy.
 - Translate and localise the MEANING of every keyword into each target language. NEVER paste a foreign-language word (e.g. Japanese characters) verbatim into a Khmer or English post. The published posts must be 100% in the target language, with no mixed-in Japanese.
+- PROPER NOUNS (the store name and the area/locality) may also be written in the owner's language. Render them in the TARGET language's own script by TRANSLITERATION (how they sound), not by meaning: romanise for the English post, use Khmer script for the Khmer post — e.g. "天文館" → "Tenmonkan" (en) / "តេនម៉ុនកាន់" (km); "鹿児島" → "Kagoshima". A reader must be able to read every single character of the post; NEVER leave Japanese/Chinese characters inside a Khmer or English post, not even for the store name.
 
 REQUIREMENTS:
 - Pick an everyday, authentic angle from the given theme (e.g. the broth simmered overnight, the char siu, the hospitality). Make it feel real and specific, not generic marketing.
@@ -172,6 +173,7 @@ You will receive the CURRENT draft (Khmer + English) and the OWNER's instruction
 IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
 - The owner's instruction may be written in their own language (e.g. Japanese). Treat it as MEANING to apply — NOT text to copy.
 - Translate and localise the meaning into each target language. NEVER paste a foreign-language word (e.g. Japanese characters) verbatim into a Khmer or English post. The published posts must be 100% in the target language.
+- PROPER NOUNS (store name, area/locality) must be TRANSLITERATED into the target script (romanised for English, Khmer script for Khmer) — e.g. "天文館" → "Tenmonkan" / "តេនម៉ុនកាន់". Never leave Japanese/Chinese characters inside a Khmer or English post, not even for the store name.
 
 REQUIREMENTS:
 - Apply the owner's instruction to the post. Keep whatever they did not ask to change. If they wrote entirely new content, base the post on that.
