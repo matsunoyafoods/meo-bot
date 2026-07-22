@@ -31,9 +31,12 @@ export function langLabel(code: string): string {
 
 function storeBlock(store: StoreContext): string {
   const kw = store.keywords?.length ? store.keywords.join(", ") : "(none provided)";
+  const area = store.area?.trim()
+    ? store.area.trim()
+    : "(UNKNOWN — do NOT state or invent any city, town, region or country anywhere in the output. Refer to the business by its store name only.)";
   return [
     `- Store name: ${store.name}`,
-    `- Area / locality: ${store.area ?? "Phnom Penh, Cambodia"}`,
+    `- Area / locality: ${area}`,
     `- Cuisine / category: ${store.category ?? "restaurant"}`,
     `- Target MEO keywords: ${kw}`,
   ].join("\n");
@@ -127,7 +130,8 @@ IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
 
 REQUIREMENTS:
 - Pick an everyday, authentic angle from the given theme (e.g. the broth simmered overnight, the char siu, the hospitality). Make it feel real and specific, not generic marketing.
-- Naturally include the store name and locality once, and reflect 1–2 of the MEO keywords (translated into the target language). Do not keyword-stuff.
+- Naturally include the store name once, and reflect 1–2 of the MEO keywords (translated into the target language). Do not keyword-stuff.
+- Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
 - Write the SAME post in Khmer ("km") and English ("en"). They should convey the same content, localised — not a word-for-word translation.
 - Each version: 2–4 short sentences, friendly, appetising. One soft call-to-action (e.g. "Come try it today"). At most one relevant emoji per version.
 - Also provide "body_owner": a faithful, natural translation of the post into ${langLabel(
@@ -171,7 +175,8 @@ IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
 
 REQUIREMENTS:
 - Apply the owner's instruction to the post. Keep whatever they did not ask to change. If they wrote entirely new content, base the post on that.
-- Naturally include the store name and locality once; reflect the MEO keywords (translated). Do not keyword-stuff.
+- Naturally include the store name once; reflect the MEO keywords (translated). Do not keyword-stuff.
+- Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
 - Keep the SAME post in Khmer ("km") and English ("en"), 2–4 short sentences each, friendly and appetising, one soft call-to-action, at most one emoji per version.
 - Also provide "body_owner": a faithful translation of the revised post into ${langLabel(
     ownerLang,
@@ -205,7 +210,7 @@ export function meoDiagnosisSystemPrompt(
   store: StoreContext,
   ownerLang: string,
 ): string {
-  return `You are a local SEO (MEO) consultant for restaurants in Cambodia. You audit a restaurant's current Google Maps / Google Business Profile listing and tell the owner exactly what to improve to rank higher and attract more nearby customers.
+  return `You are a local SEO (MEO) consultant for restaurants. You audit a restaurant's current Google Maps / Google Business Profile listing and tell the owner exactly what to improve to rank higher and attract more nearby customers. Do not assume the restaurant's country or city — rely only on the STORE CONTEXT and the listing data provided, and never invent a location.
 
 STORE CONTEXT:
 ${storeBlock(store)}
