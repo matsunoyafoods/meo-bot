@@ -29,6 +29,10 @@ export interface StoreRow {
   id: string;
   name: string;
   telegram_chat_id: number | null;
+  /** 運用チャネル。既存はすべて 'telegram'。 */
+  platform: "telegram" | "line";
+  /** LINE ユーザーID（platform='line' のとき使用） */
+  line_user_id: string | null;
   owner_lang: OwnerLang;
   avg_ticket_amount: number;
   avg_ticket_currency: string;

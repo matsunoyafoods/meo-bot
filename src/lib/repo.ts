@@ -38,6 +38,37 @@ export async function ensureStoreForChat(chatId: number): Promise<StoreRow> {
   return data;
 }
 
+/* ---------- LINE チャネル（日本市場向け・Telegram と並行運用） ---------- */
+
+export async function getStoreByLineUser(lineUserId: string): Promise<StoreRow | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("line_user_id", lineUserId)
+    .maybeSingle<StoreRow>();
+  return data ?? null;
+}
+
+/** LINE の友だち/発話時: 該当店舗が無ければ作る（無料期間つき・言語は日本語既定） */
+export async function ensureStoreForLineUser(lineUserId: string): Promise<StoreRow> {
+  const existing = await getStoreByLineUser(lineUserId);
+  if (existing) return existing;
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("stores")
+    .insert({
+      platform: "line",
+      line_user_id: lineUserId,
+      owner_lang: "ja",
+      trial_ends_at: addMonths(new Date(), DEFAULT_TRIAL_MONTHS).toISOString(),
+    })
+    .select("*")
+    .single<StoreRow>();
+  if (error || !data) throw new Error(`ensureStoreForLineUser failed: ${error?.message}`);
+  return data;
+}
+
 export async function updateStore(
   storeId: string,
   patch: Partial<StoreRow>,

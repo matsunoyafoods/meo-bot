@@ -52,4 +52,9 @@ export const env = {
   stripeSecretKey: () => optional("STRIPE_SECRET_KEY", ""),
   stripeWebhookSecret: () => optional("STRIPE_WEBHOOK_SECRET", ""),
   stripePriceId: () => optional("STRIPE_PRICE_ID", ""),
+
+  // LINE（Messaging API）。未設定でもアプリは動く（LINE連携だけ無効）。
+  // 日本市場向けにTelegramと並行提供する。
+  lineChannelAccessToken: () => optional("LINE_CHANNEL_ACCESS_TOKEN", ""),
+  lineChannelSecret: () => optional("LINE_CHANNEL_SECRET", ""),
 } as const;
