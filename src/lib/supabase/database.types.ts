@@ -21,6 +21,7 @@ export type OwnerStateMode =
   | "awaiting_post_edit"
   | "awaiting_category"
   | "awaiting_keywords"
+  | "awaiting_area"
   | "awaiting_contact_message"
   | null;
 
@@ -40,6 +41,7 @@ export interface StoreRow {
   status: "active" | "suspended";
   category: string | null;
   keywords: string | null;
+  area: string | null;
   sales_rep_id: string | null;
   last_cron_at: string | null;
   trial_notify_stage: number;

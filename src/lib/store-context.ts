@@ -13,12 +13,13 @@ export function toStoreContext(store: StoreRow): StoreContext {
 
   const keywords = [store.name, ...kw].filter(Boolean);
 
+  // オーナーが設定したエリア（市区町村）があればそれを使う。
+  // 未設定なら undefined のまま → プロンプト側で「都市名を創作しない」ガードが効く。
+  const area = store.area?.trim() || undefined;
+
   return {
     name: store.name || "our restaurant",
-    // 地域は店舗ごとに実際の所在地が異なる（鹿児島・プノンペン等）。
-    // 現状DBに住所を保持していないため、勝手な都市名は入れず undefined にする。
-    // → プロンプト側で「地域が不明なら都市名を創作しない」よう指示している。
-    area: undefined,
+    area,
     category: store.category || "restaurant",
     keywords: keywords.length ? keywords : [store.name || "our restaurant"],
   };

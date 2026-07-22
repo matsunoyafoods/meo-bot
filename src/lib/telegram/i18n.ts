@@ -20,9 +20,14 @@ const ja: Dict = {
   ask_category:
     "店舗のジャンル・主な商品を入力してください（例: ラーメン店、カフェ、焼肉店、タイ料理）。投稿文の生成に使います。",
   ask_keywords:
-    "投稿で使いたいキーワードを入力してください（カンマ区切り。例: 味噌ラーメン, 餃子, プノンペン, ランチ）。",
+    "投稿で使いたいキーワードを入力してください（カンマ区切り。例: 味噌ラーメン, 餃子, 天文館, ランチ）。",
   category_saved: "✅ ジャンル・商品を「{v}」に設定しました。",
   keywords_saved: "✅ キーワードを設定しました。",
+  set_area: "📍 エリア（市区町村）を設定",
+  ask_area:
+    "店舗のエリア（市区町村・地域名）を入力してください（例: 鹿児島市 天文館 / プノンペン BKK1）。投稿やMEOで地域名として使います。空欄にしたい場合は「なし」と入力。",
+  area_saved: "✅ エリアを「{v}」に設定しました。",
+  area_cleared: "✅ エリア設定を解除しました（地域名は使いません）。",
   setup_prompt:
     "はじめに初期設定をしましょう。下のボタンから、母国語・ジャンル・キーワード・客単価を設定できます（後で /settings でも変更できます）。",
   choose_language: "通知・翻訳に使う母国語を選んでください。",
@@ -119,6 +124,11 @@ const en: Dict = {
     "Enter keywords to use in posts (comma-separated, e.g. miso ramen, gyoza, Phnom Penh, lunch).",
   category_saved: "✅ Genre / products set to \"{v}\".",
   keywords_saved: "✅ Keywords saved.",
+  set_area: "📍 Set area (city / district)",
+  ask_area:
+    "Enter your area (city / district / neighborhood), e.g. “Tenmonkan, Kagoshima” or “BKK1, Phnom Penh”. It’s woven into posts and MEO. Type “none” to leave it unset.",
+  area_saved: "✅ Area set to \"{v}\".",
+  area_cleared: "✅ Area cleared (no locality will be used).",
   setup_prompt:
     "Let's set things up first. Use the buttons below to set your language, genre, keywords and average ticket (you can change them later with /settings).",
   choose_language: "Choose the language for notifications and translations.",
@@ -215,6 +225,11 @@ const km: Dict = {
     "សូមបញ្ចូលពាក្យគន្លឹះសម្រាប់ការបង្ហោះ (បំបែកដោយសញ្ញាក្បៀស ឧ. រ៉ាមេនមីសូ, គ្យូហ្សា, ភ្នំពេញ, អាហារថ្ងៃត្រង់)។",
   category_saved: "✅ បានកំណត់ប្រភេទ/ផលិតផលទៅ «{v}»។",
   keywords_saved: "✅ បានរក្សាទុកពាក្យគន្លឹះ។",
+  set_area: "📍 កំណត់តំបន់ (ក្រុង/សង្កាត់)",
+  ask_area:
+    "សូមបញ្ចូលតំបន់របស់អ្នក (ក្រុង/សង្កាត់/មូលដ្ឋាន) ឧ. «BKK1, ភ្នំពេញ»។ វានឹងត្រូវប្រើក្នុងការបង្ហោះ និង MEO។ វាយ «none» ដើម្បីទុកចោល។",
+  area_saved: "✅ បានកំណត់តំបន់ទៅ «{v}»។",
+  area_cleared: "✅ បានលុបតំបន់ (មិនប្រើឈ្មោះតំបន់ទេ)។",
   setup_prompt:
     "ដំបូងសូមកំណត់ការកំណត់។ ប្រើប៊ូតុងខាងក្រោមដើម្បីកំណត់ភាសា ប្រភេទ ពាក្យគន្លឹះ និងតម្លៃមធ្យម (អាចផ្លាស់ប្តូរពេលក្រោយដោយ /settings)។",
   choose_language: "ជ្រើសរើសភាសាសម្រាប់ការជូនដំណឹង និងការបកប្រែ។",
@@ -311,6 +326,11 @@ const zh: Dict = {
     "请输入用于帖文的关键词（用逗号分隔，例：味噌拉面, 饺子, 金边, 午餐）。",
   category_saved: "✅ 类别/商品已设置为「{v}」。",
   keywords_saved: "✅ 关键词已保存。",
+  set_area: "📍 设置地区（城市/街区）",
+  ask_area:
+    "请输入您的地区（城市/街区/地段），例如「鹿儿岛 天文馆」或「金边 BKK1」。将用于帖文和MEO。输入「none」可清空。",
+  area_saved: "✅ 地区已设置为「{v}」。",
+  area_cleared: "✅ 已清除地区（不使用地区名）。",
   setup_prompt:
     "先来做初始设置吧。用下方按钮设置语言、类别、关键词和客单价（之后可用 /settings 修改）。",
   choose_language: "请选择用于通知和翻译的语言。",

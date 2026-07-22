@@ -131,6 +131,9 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (state?.mode === "awaiting_keywords") {
     return handleKeywordsText(store, text);
   }
+  if (state?.mode === "awaiting_area") {
+    return handleAreaText(store, text);
+  }
   if (state?.mode === "awaiting_contact_message") {
     return handleContactText(store, chatId, text);
   }
@@ -322,6 +325,7 @@ async function sendSettingsMenu(chatId: number, lang: OwnerLang, header?: string
   await sendMessage(chatId, header ?? t(lang, "settings_title"), [
     [{ text: t(lang, "set_language"), callback_data: "set_lang_menu" }],
     [{ text: t(lang, "set_category"), callback_data: "set_category" }],
+    [{ text: t(lang, "set_area"), callback_data: "set_area" }],
     [{ text: t(lang, "set_keywords"), callback_data: "set_keywords" }],
     [{ text: t(lang, "set_ticket"), callback_data: "set_ticket" }],
   ]);
@@ -497,6 +501,20 @@ async function handleKeywordsText(store: StoreRow, text: string): Promise<void> 
   await sendMessage(store.telegram_chat_id!, t(lang, "keywords_saved"));
 }
 
+/* ---------- エリア（市区町村）テキスト入力 ---------- */
+async function handleAreaText(store: StoreRow, text: string): Promise<void> {
+  const lang = store.owner_lang;
+  const v = text.trim();
+  // 「なし / none / 無」で解除（都市名を使わない）
+  const clear = /^(none|なし|無|no|N\/A)$/i.test(v);
+  await updateStore(store.id, { area: clear || !v ? null : v });
+  await clearOwnerState(store.id);
+  await sendMessage(
+    store.telegram_chat_id!,
+    clear || !v ? t(lang, "area_cleared") : t(lang, "area_saved", { v }),
+  );
+}
+
 /* ---------- 客単価テキスト入力 ---------- */
 async function handleTicketText(store: StoreRow, text: string): Promise<void> {
   const lang = store.owner_lang;
@@ -636,6 +654,11 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     await setOwnerState(store.id, "awaiting_category", {});
     await answerCallbackQuery(cb.id);
     return void sendMessage(chatId, t(store.owner_lang, "ask_category"));
+  }
+  if (data === "set_area") {
+    await setOwnerState(store.id, "awaiting_area", {});
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(store.owner_lang, "ask_area"));
   }
   if (data === "set_keywords") {
     await setOwnerState(store.id, "awaiting_keywords", {});
