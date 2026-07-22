@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { env } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   answerCallbackQuery,
@@ -101,6 +102,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (menuAction === "settings") return cmdSettings(chatId);
   if (menuAction === "subscribe") return cmdSubscribe(chatId);
   if (menuAction === "manage") return cmdManage(chatId);
+  if (menuAction === "contact") return cmdContact(chatId);
 
   // コマンド以外 → 会話状態に応じて処理（編集フロー / 客単価入力 / 投稿キーワード）
   const store = await getStoreByChatId(chatId);
@@ -128,6 +130,9 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   }
   if (state?.mode === "awaiting_keywords") {
     return handleKeywordsText(store, text);
+  }
+  if (state?.mode === "awaiting_contact_message") {
+    return handleContactText(store, chatId, text);
   }
   // 状態が無ければ軽くヘルプ（グループでは雑談に反応しないため何もしない）
   if (isGroup) return;
@@ -247,16 +252,24 @@ function isGroupChat(chatId: number): boolean {
   return chatId < 0;
 }
 
-/** 常設リプライキーボードの並び（投稿・診断・口コミ・設定 ＋ 契約・解約） */
+/** 常設リプライキーボードの並び（投稿・診断・口コミ・設定 ＋ 契約・解約 ＋ 問い合わせ） */
 function menuKeyboardRows(lang: OwnerLang): string[][] {
   return [
     [t(lang, "menu_post"), t(lang, "menu_diagnose")],
     [t(lang, "menu_reviews"), t(lang, "menu_settings")],
     [t(lang, "subscribe_cta"), t(lang, "manage_link_btn")],
+    [t(lang, "menu_contact")],
   ];
 }
 
-type MenuAction = "post" | "diagnose" | "reviews" | "settings" | "subscribe" | "manage";
+type MenuAction =
+  | "post"
+  | "diagnose"
+  | "reviews"
+  | "settings"
+  | "subscribe"
+  | "manage"
+  | "contact";
 
 /**
  * リプライキーボードのボタン文字 → メニュー動作を判定。
@@ -271,6 +284,7 @@ function resolveMenuLabel(text: string): MenuAction | null {
     if (text === t(lang, "menu_settings")) return "settings";
     if (text === t(lang, "subscribe_cta")) return "subscribe";
     if (text === t(lang, "manage_link_btn")) return "manage";
+    if (text === t(lang, "menu_contact")) return "contact";
   }
   return null;
 }
@@ -330,9 +344,12 @@ async function blockedByTrial(store: StoreRow): Promise<boolean> {
   return true;
 }
 
-/** お申し込み（Checkout）リンクを送る */
-async function sendSubscribeLink(store: StoreRow): Promise<void> {
-  const chatId = store.telegram_chat_id!;
+/**
+ * お申し込み（Checkout）リンクを送る。
+ * replyTo を渡すと「押されたチャット」へ返信（グループで確実に見えるように）。
+ */
+async function sendSubscribeLink(store: StoreRow, replyTo?: number): Promise<void> {
+  const chatId = replyTo ?? store.telegram_chat_id!;
   const lang = store.owner_lang;
   if (!stripeConfigured()) return void sendMessage(chatId, t(lang, "pay_unavailable"));
   let url: string | null = null;
@@ -347,9 +364,13 @@ async function sendSubscribeLink(store: StoreRow): Promise<void> {
   ]);
 }
 
-/** 契約管理（解約・カード変更）リンクを送る */
-async function sendManageLink(store: StoreRow): Promise<void> {
-  const chatId = store.telegram_chat_id!;
+/**
+ * 契約管理（解約・カード変更）リンクを送る。
+ * 契約が無い／ポータル未設定などでリンクが作れない場合は、その旨＋「お申し込み」ボタンを返す
+ * （無反応に見えないように必ず何かを返信する）。
+ */
+async function sendManageLink(store: StoreRow, replyTo?: number): Promise<void> {
+  const chatId = replyTo ?? store.telegram_chat_id!;
   const lang = store.owner_lang;
   let url: string | null = null;
   try {
@@ -357,7 +378,14 @@ async function sendManageLink(store: StoreRow): Promise<void> {
   } catch (e) {
     console.error("[telegram] createPortalUrl", e);
   }
-  if (!url) return void sendMessage(chatId, t(lang, "manage_unavailable"));
+  if (!url) {
+    // 契約前 or ポータル未設定 → 案内＋申込ボタン（無反応を防ぐ）
+    return void sendMessage(
+      chatId,
+      t(lang, "manage_unavailable"),
+      subscribeKeyboard(lang),
+    );
+  }
   await sendMessage(chatId, t(lang, "manage_link_msg"), [
     [{ text: t(lang, "manage_link_btn"), url }],
   ]);
@@ -366,13 +394,55 @@ async function sendManageLink(store: StoreRow): Promise<void> {
 async function cmdSubscribe(chatId: number): Promise<void> {
   const store = await getStoreByChatId(chatId);
   if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
-  await sendSubscribeLink(store);
+  await sendSubscribeLink(store, chatId);
 }
 
 async function cmdManage(chatId: number): Promise<void> {
   const store = await getStoreByChatId(chatId);
   if (!store) return void sendMessage(chatId, t("ja", "not_connected"));
-  await sendManageLink(store);
+  await sendManageLink(store, chatId);
+}
+
+/* ---------- 問い合わせ: 入力を促し、内容を管理者Telegramへ転送 ---------- */
+async function cmdContact(chatId: number): Promise<void> {
+  const store = await getStoreByChatId(chatId);
+  const lang = store?.owner_lang ?? "ja";
+  // 店舗が無い（未 /start）でも問い合わせは受けたいので、状態は store があるときだけ保存
+  if (store) {
+    await setOwnerState(store.id, "awaiting_contact_message", { chat_id: String(chatId) });
+  }
+  await sendMessage(chatId, t(lang, "contact_prompt"));
+}
+
+/** 問い合わせ本文を管理者(Tom)のTelegramへ転送し、送信元へ受付確認を返す */
+async function handleContactText(store: StoreRow, chatId: number, text: string): Promise<void> {
+  await clearOwnerState(store.id);
+  const lang = store.owner_lang;
+  const body = text.trim();
+  if (!body) return;
+
+  const adminId = Number(env.adminTelegramChatId());
+  if (!adminId || Number.isNaN(adminId)) {
+    console.error("[telegram] contact: ADMIN_TELEGRAM_CHAT_ID 未設定のため転送できません");
+    return void sendMessage(chatId, t(lang, "contact_unavailable"));
+  }
+
+  const storeName = store.name?.trim() || "(店名未設定)";
+  const forward =
+    `📩 <b>新しい問い合わせ</b>\n` +
+    `店舗: ${escapeHtml(storeName)}\n` +
+    `言語: ${lang}\n` +
+    `chat_id: <code>${chatId}</code>\n` +
+    `store_id: <code>${store.id}</code>\n` +
+    `— — —\n` +
+    `${escapeHtml(body)}`;
+
+  const res = await sendMessage(adminId, forward);
+  if (!res.message_id) {
+    // 転送に失敗（管理者IDが不正/ブロック等）→ 利用者には受付不可を伝える
+    return void sendMessage(chatId, t(lang, "contact_unavailable"));
+  }
+  await sendMessage(chatId, t(lang, "contact_sent"));
 }
 
 async function cmdPost(chatId: number): Promise<void> {

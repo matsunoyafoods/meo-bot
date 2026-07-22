@@ -21,6 +21,7 @@ export type OwnerStateMode =
   | "awaiting_post_edit"
   | "awaiting_category"
   | "awaiting_keywords"
+  | "awaiting_contact_message"
   | null;
 
 export interface StoreRow {
