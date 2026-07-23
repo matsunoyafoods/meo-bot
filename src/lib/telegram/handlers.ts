@@ -76,6 +76,15 @@ async function handleMessage(msg: TgMessage): Promise<void> {
     );
   }
 
+  // 問い合わせ転送メッセージへの「返信(reply)」→ store_id をメッセージ本文から自動抽出して配信
+  // （コピペ不要。管理者が転送メッセージにそのまま Telegram の reply 機能で返信すればよい）
+  if (msg.reply_to_message) {
+    const repliedStoreId = extractStoreIdFromForward(msg.reply_to_message.text);
+    if (repliedStoreId && text) {
+      return cmdReplyTo(chatId, repliedStoreId, text);
+    }
+  }
+
   // コマンド（DM・グループ共通で処理。グループは chat_id = グループID の店舗として扱う）
   if (text.startsWith("/start")) {
     // グループ + 招待トークン → 既存店舗のレポート配信先として登録（従来動作）
@@ -447,7 +456,7 @@ async function handleContactText(store: StoreRow, chatId: number, text: string):
     `store_id: <code>${store.id}</code>\n` +
     `— — —\n` +
     `${escapeHtml(body)}\n\n` +
-    `返信: <code>/reply ${store.id} </code>`;
+    `↩️ このメッセージに返信(reply)すると、そのまま店舗に届きます。`;
 
   const res = await sendMessage(adminId, forward);
   if (!res.message_id) {
@@ -457,10 +466,56 @@ async function handleContactText(store: StoreRow, chatId: number, text: string):
   await sendMessage(chatId, t(lang, "contact_sent"));
 }
 
+/** 転送メッセージ本文から store_id を抜き出す（Telegramのreply_to_messageに使う。UUID形式のみ許容） */
+function extractStoreIdFromForward(text?: string): string | null {
+  if (!text) return null;
+  const m = text.match(/store_id:\s*([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
+  return m ? m[1] : null;
+}
+
+/** 実際の配信処理（/reply コマンドと reply-to 自動判定の共通処理） */
+async function deliverAdminReply(chatId: number, storeId: string, message: string): Promise<void> {
+  const store = await getStoreById(storeId);
+  if (!store) {
+    return void sendMessage(chatId, `store_id が見つかりません: ${escapeHtml(storeId)}`);
+  }
+  if (!storeHasChannel(store)) {
+    return void sendMessage(
+      chatId,
+      `この店舗には配信先チャネルがありません（${escapeHtml(store.name || "店名未設定")}）`,
+    );
+  }
+  try {
+    await deliverToStore(store, `📩 <b>お問い合わせへの返信</b>\n\n${escapeHtml(message)}`);
+    const channel = store.platform === "line" ? "LINE" : "Telegram";
+    await sendMessage(
+      chatId,
+      `✅ ${escapeHtml(store.name || "店名未設定")}（${channel}）へ送信しました。`,
+    );
+  } catch (e) {
+    console.error("[telegram] deliverAdminReply error", e);
+    await sendMessage(chatId, "送信に失敗しました。");
+  }
+}
+
+/**
+ * 管理者(Tom)専用: 問い合わせ転送メッセージに「返信(reply)」した場合の処理。
+ * store_id は転送メッセージの本文から自動抽出するため、コピペ不要。
+ */
+async function cmdReplyTo(chatId: number, storeId: string, message: string): Promise<void> {
+  const adminId = Number(env.adminTelegramChatId());
+  if (!adminId || Number.isNaN(adminId) || chatId !== adminId) {
+    return; // 管理者以外には無反応
+  }
+  const body = message.trim();
+  if (!body) return;
+  await deliverAdminReply(chatId, storeId, body);
+}
+
 /**
  * 管理者(Tom)専用: 問い合わせへの返信を店舗のチャネル（LINE/Telegramどちらでも）へ配信する。
  * 使い方: /reply <store_id> <メッセージ>
- * 問い合わせ転送メッセージに載せている store_id をそのまま使う想定。
+ * 通常は転送メッセージへの reply（スワイプ返信）の方が簡単なので、こちらは補助的な手段。
  */
 async function cmdReply(chatId: number, text: string): Promise<void> {
   const adminId = Number(env.adminTelegramChatId());
@@ -478,29 +533,7 @@ async function cmdReply(chatId: number, text: string): Promise<void> {
   if (!storeId || !message) {
     return void sendMessage(chatId, "使い方: /reply <store_id> <メッセージ>");
   }
-
-  const store = await getStoreById(storeId);
-  if (!store) {
-    return void sendMessage(chatId, `store_id が見つかりません: ${escapeHtml(storeId)}`);
-  }
-  if (!storeHasChannel(store)) {
-    return void sendMessage(
-      chatId,
-      `この店舗には配信先チャネルがありません（${escapeHtml(store.name || "店名未設定")}）`,
-    );
-  }
-
-  try {
-    await deliverToStore(store, `📩 <b>お問い合わせへの返信</b>\n\n${escapeHtml(message)}`);
-    const channel = store.platform === "line" ? "LINE" : "Telegram";
-    await sendMessage(
-      chatId,
-      `✅ ${escapeHtml(store.name || "店名未設定")}（${channel}）へ送信しました。`,
-    );
-  } catch (e) {
-    console.error("[telegram] cmdReply deliver error", e);
-    await sendMessage(chatId, "送信に失敗しました。");
-  }
+  await deliverAdminReply(chatId, storeId, message);
 }
 
 async function cmdPost(chatId: number): Promise<void> {
