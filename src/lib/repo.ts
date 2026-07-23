@@ -17,6 +17,17 @@ export async function getStoreByChatId(chatId: number): Promise<StoreRow | null>
   return data ?? null;
 }
 
+/** store_id からの直接取得（管理者コマンド /reply 等で使用） */
+export async function getStoreById(storeId: string): Promise<StoreRow | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("id", storeId)
+    .maybeSingle<StoreRow>();
+  return data ?? null;
+}
+
 /** 新規店舗のデフォルト無料期間（ヶ月）。招待/紹介リンク経由でなくても付与する。 */
 const DEFAULT_TRIAL_MONTHS = 1;
 
