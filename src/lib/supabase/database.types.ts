@@ -166,3 +166,18 @@ export type KpiReportInsert = Omit<KpiReportRow, "id" | "created_at"> & {
   created_at?: string;
 };
 export type KpiReportUpdate = Partial<KpiReportRow>;
+export interface RepCommissionEventRow {
+  id: string;
+  store_id: string;
+  sales_rep_id: string;
+  stripe_invoice_id: string;
+  kind: "one_time" | "recurring";
+  amount: number;
+  paid_at: string;
+  created_at: string;
+}
+export type RepCommissionEventInsert = Omit<RepCommissionEventRow, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
+
