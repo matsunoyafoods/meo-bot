@@ -34,7 +34,8 @@ export function stripeConfigured(): boolean {
  * 既存の無料期限が未来なら、その日まで無料（Stripeのtrial_end）にして二重無料を防ぐ。
  */
 export async function createSubscribeUrl(store: StoreRow): Promise<string | null> {
-  if (!stripeConfigured() || !store.telegram_chat_id) return null;
+  // Telegram / LINE どちらのチャネルでも可（宛先は store.id で紐付け）
+  if (!stripeConfigured() || (!store.telegram_chat_id && !store.line_user_id)) return null;
   const s = stripe();
 
   const nowSec = Math.floor(Date.now() / 1000);

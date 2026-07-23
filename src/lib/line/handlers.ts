@@ -20,6 +20,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildAuthUrl } from "@/lib/google/oauth";
 import { isStoreUsable } from "@/lib/trial";
 import { runDiagnosis } from "@/lib/workflows/diagnose";
+import { createSubscribeUrl, createPortalUrl, stripeConfigured } from "@/lib/stripe";
 import type { OwnerLang, StoreRow } from "@/lib/supabase/database.types";
 
 /**
@@ -207,11 +208,41 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
     return;
   }
 
-  // 投稿・口コミ・課金は次段で接続
-  if (["menu_post", "menu_reviews", "subscribe", "manage"].includes(data)) {
+  // お申し込み（Stripe Checkout）
+  if (data === "subscribe") {
+    if (!stripeConfigured()) {
+      return void await reply(replyToken, t(lang, "pay_unavailable"), mainMenu(store));
+    }
+    let url: string | null = null;
+    try {
+      url = await createSubscribeUrl(store);
+    } catch (e) {
+      console.error("[line] createSubscribeUrl", e);
+    }
+    if (!url) return void await reply(replyToken, t(lang, "pay_unavailable"), mainMenu(store));
+    return void await reply(replyToken, t(lang, "pay_link_msg"), [
+      { label: t(lang, "pay_link_btn"), url },
+    ]);
+  }
+  // 契約管理・解約（Customer Portal）
+  if (data === "manage") {
+    let url: string | null = null;
+    try {
+      url = await createPortalUrl(store);
+    } catch (e) {
+      console.error("[line] createPortalUrl", e);
+    }
+    if (!url) return void await reply(replyToken, t(lang, "manage_unavailable"), mainMenu(store));
+    return void await reply(replyToken, t(lang, "manage_link_msg"), [
+      { label: t(lang, "manage_link_btn"), url },
+    ]);
+  }
+
+  // 投稿・口コミは次段で接続
+  if (["menu_post", "menu_reviews"].includes(data)) {
     return void await reply(
       replyToken,
-      "この機能はまもなくLINEでもご利用いただけます（準備中です）。今は「Google連携」「MEO診断」「設定」「問い合わせ」がご利用いただけます。",
+      "この機能はまもなくLINEでもご利用いただけます（準備中です）。今は「Google連携」「MEO診断」「設定」「お申し込み」「問い合わせ」がご利用いただけます。",
       mainMenu(store),
     );
   }

@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { sendMessage } from "@/lib/telegram/client";
+import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { t } from "@/lib/telegram/i18n";
 import type { StoreRow } from "@/lib/supabase/database.types";
 
@@ -104,9 +104,9 @@ async function handleEvent(event: Stripe.Event, supabase: Supa): Promise<void> {
           .select("*")
           .eq("stripe_subscription_id", subId)
           .maybeSingle<StoreRow>();
-        if (store?.telegram_chat_id) {
+        if (store && storeHasChannel(store)) {
           try {
-            await sendMessage(store.telegram_chat_id, t(store.owner_lang, "payment_failed"));
+            await deliverToStore(store, t(store.owner_lang, "payment_failed"));
           } catch (e) {
             console.error("[stripe] payment_failed notify", e);
           }
@@ -136,9 +136,9 @@ async function syncSubscription(subId: string, supabase: Supa, notifyStore: bool
       ...(active ? { status: "active" as const } : {}),
     })
     .eq("id", store.id);
-  if (notifyStore && store.telegram_chat_id) {
+  if (notifyStore && storeHasChannel(store)) {
     try {
-      await sendMessage(store.telegram_chat_id, t(store.owner_lang, "payment_ok"));
+      await deliverToStore(store, t(store.owner_lang, "payment_ok"));
     } catch (e) {
       console.error("[stripe] payment_ok notify", e);
     }
@@ -151,9 +151,9 @@ async function notify(supabase: Supa, storeId: string, key: string): Promise<voi
     .select("*")
     .eq("id", storeId)
     .maybeSingle<StoreRow>();
-  if (store?.telegram_chat_id) {
+  if (store && storeHasChannel(store)) {
     try {
-      await sendMessage(store.telegram_chat_id, t(store.owner_lang, key));
+      await deliverToStore(store, t(store.owner_lang, key));
     } catch (e) {
       console.error("[stripe] notify", e);
     }
