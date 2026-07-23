@@ -224,9 +224,11 @@ async function sendGoogleConnect(store: StoreRow, replyToken: string): Promise<v
   const lang = store.owner_lang;
   const state = randomUUID();
   const supabase = createSupabaseAdminClient();
-  await supabase
+  const { error: insErr } = await supabase
     .from("oauth_states")
     .insert({ state, platform: "line", line_user_id: store.line_user_id });
+  if (insErr) console.error("[line] oauth_state insert failed:", JSON.stringify(insErr));
+  else console.log("[line] oauth_state saved", JSON.stringify({ line_user_id: store.line_user_id }));
   const url = buildAuthUrl(state);
   await reply(replyToken, t(lang, "welcome"), [{ label: t(lang, "connect_google"), url }]);
 }
