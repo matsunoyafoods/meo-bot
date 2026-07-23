@@ -20,6 +20,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildAuthUrl } from "@/lib/google/oauth";
 import { isStoreUsable } from "@/lib/trial";
 import { runDiagnosis } from "@/lib/workflows/diagnose";
+import { proposeArticle, reviseArticlePost, publishPost } from "@/lib/workflows/article";
 import { createSubscribeUrl, createPortalUrl, stripeConfigured } from "@/lib/stripe";
 import type { OwnerLang, StoreRow } from "@/lib/supabase/database.types";
 
@@ -154,6 +155,30 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
       mainMenu(store),
     );
   }
+  if (state?.mode === "awaiting_post_keyword") {
+    await clearOwnerState(store.id);
+    if (!text) return void await reply(replyToken, t(lang, "menu_title"), mainMenu(store));
+    // 生成には数秒かかる。下書き＋確認ボタンは proposeArticle 内で deliverToStore（push）で届く。
+    await reply(replyToken, t(lang, "generating"));
+    try {
+      await proposeArticle(store, text);
+    } catch (e) {
+      console.error("[line] custom post error", e);
+    }
+    return;
+  }
+  if (state?.mode === "awaiting_post_edit") {
+    const postId = state.context.post_id as string;
+    await clearOwnerState(store.id);
+    if (!text) return void await reply(replyToken, t(lang, "menu_title"), mainMenu(store));
+    await reply(replyToken, t(lang, "generating"));
+    try {
+      await reviseArticlePost(store, postId, text);
+    } catch (e) {
+      console.error("[line] post edit error", e);
+    }
+    return;
+  }
 
   // 状態なし → メニューを表示
   await reply(replyToken, t(lang, "menu_title"), mainMenu(store));
@@ -246,11 +271,47 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
     ]);
   }
 
-  // 投稿・口コミは次段で接続
-  if (["menu_post", "menu_reviews"].includes(data)) {
+  // 投稿: キーワード入力を促す（生成はテキスト受信時に実行）
+  if (data === "menu_post") {
+    if (!isStoreUsable(store)) {
+      return void await reply(replyToken, t(lang, "trial_ended"), mainMenu(store));
+    }
+    // 投稿はGoogle連携が必要。未連携なら連携リンクを案内。
+    if (!store.onboarded) {
+      return void await sendGoogleConnect(store, replyToken);
+    }
+    await setOwnerState(store.id, "awaiting_post_keyword", {});
+    return void await reply(replyToken, t(lang, "ask_post_keyword"));
+  }
+  // 記事: 投稿する
+  if (data.startsWith("post_pub:")) {
+    const postId = data.split(":")[1];
+    try {
+      await publishPost(postId);
+      return void await reply(replyToken, t(lang, "published"), mainMenu(store));
+    } catch (e) {
+      console.error("[line] publish error", e);
+      return void await reply(replyToken, t(lang, "error"), mainMenu(store));
+    }
+  }
+  // 記事: 編集指示を促す
+  if (data.startsWith("post_edit:")) {
+    const postId = data.split(":")[1];
+    await setOwnerState(store.id, "awaiting_post_edit", { post_id: postId });
+    return void await reply(replyToken, t(lang, "ask_post_edit"));
+  }
+  // 記事: 見送る
+  if (data.startsWith("post_skip:")) {
+    const supabase = createSupabaseAdminClient();
+    await supabase.from("posts").update({ status: "skipped" }).eq("id", data.split(":")[1]);
+    return void await reply(replyToken, t(lang, "skipped"), mainMenu(store));
+  }
+
+  // 口コミは次段で接続
+  if (data === "menu_reviews") {
     return void await reply(
       replyToken,
-      "この機能はまもなくLINEでもご利用いただけます（準備中です）。今は「Google連携」「MEO診断」「設定」「お申し込み」「問い合わせ」がご利用いただけます。",
+      "口コミ返信はまもなくLINEでもご利用いただけます（準備中です）。",
       mainMenu(store),
     );
   }

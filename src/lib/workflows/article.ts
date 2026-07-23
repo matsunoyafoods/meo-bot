@@ -4,7 +4,7 @@ import { generateArticle, reviseArticle } from "@/lib/gemini/client";
 import { langLabel } from "@/lib/gemini/prompts";
 import { toStoreContext } from "@/lib/store-context";
 import { createLocalPost } from "@/lib/google/business";
-import { sendMessage } from "@/lib/telegram/client";
+import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { t } from "@/lib/telegram/i18n";
 
 /** 記事テーマのローテーション（週3回ぶんの引き出し） */
@@ -36,7 +36,7 @@ export async function generateAndProposeArticle(store: StoreRow): Promise<void> 
  * の両方で使う。
  */
 export async function proposeArticle(store: StoreRow, theme: string): Promise<void> {
-  if (!store.telegram_chat_id) return;
+  if (!storeHasChannel(store)) return;
 
   const supabase = createSupabaseAdminClient();
   const ctx = toStoreContext(store);
@@ -75,7 +75,7 @@ export async function reviseArticlePost(
   postId: string,
   instruction: string,
 ): Promise<void> {
-  if (!store.telegram_chat_id) return;
+  if (!storeHasChannel(store)) return;
   const supabase = createSupabaseAdminClient();
   const { data: post } = await supabase
     .from("posts")
@@ -107,7 +107,7 @@ async function sendPostDraft(
   post: PostRow,
   bodyOwner: string,
 ): Promise<void> {
-  if (!store.telegram_chat_id) return;
+  if (!storeHasChannel(store)) return;
   const lang = store.owner_lang;
 
   // オーナー母国語版（ja/km/en/zh）を先頭に表示。ただし公開言語(km/en)と
@@ -129,11 +129,11 @@ async function sendPostDraft(
     escapeHtml(post.body_en ?? ""),
   ].join("\n");
 
-  await sendMessage(store.telegram_chat_id, text, [
-    [{ text: t(lang, "btn_publish"), callback_data: `post_pub:${post.id}` }],
+  await deliverToStore(store, text, [
+    [{ text: t(lang, "btn_publish"), data: `post_pub:${post.id}` }],
     [
-      { text: t(lang, "btn_edit"), callback_data: `post_edit:${post.id}` },
-      { text: t(lang, "btn_skip"), callback_data: `post_skip:${post.id}` },
+      { text: t(lang, "btn_edit"), data: `post_edit:${post.id}` },
+      { text: t(lang, "btn_skip"), data: `post_skip:${post.id}` },
     ],
   ]);
 }

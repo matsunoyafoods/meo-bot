@@ -119,7 +119,7 @@ export function articleSystemPrompt(
   store: StoreContext,
   ownerLang: string,
 ): string {
-  return `You write short "What's new" posts for a restaurant's Google Business Profile. These posts help local SEO (MEO) and attract nearby customers.
+  return `You write short "What's new" posts for a restaurant's Google Business Profile. Your PRIMARY GOAL is local SEO (MEO): each post must help this restaurant get FOUND by nearby customers searching Google Maps / Google. This is MEO content, not generic marketing copy — every post is a chance to rank for the terms real customers type.
 
 STORE CONTEXT:
 ${storeBlock(store)}
@@ -131,7 +131,8 @@ IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
 
 REQUIREMENTS:
 - Pick an everyday, authentic angle from the given theme (e.g. the broth simmered overnight, the char siu, the hospitality). Make it feel real and specific, not generic marketing.
-- Naturally include the store name once, and reflect 1–2 of the MEO keywords (translated into the target language). Do not keyword-stuff.
+- MEO / searchability: write so a nearby customer searching Google would find this. Naturally weave in the words people actually search for that FIT this post — the cuisine, the specific dish being featured, and (if known) the area. Include the store name once.
+- KEYWORD SELECTION (important): from the MEO keywords list, use ONLY the 1–2 keywords that genuinely match THIS post's topic. NEVER dump every keyword into the post, and NEVER force a keyword that doesn't fit the content — that reads as spam and hurts ranking. If a keyword is about ramen but the post is about the atmosphere, don't use it. Choose the keyword to fit the content, not the content to fit the keyword. The optimisation must be invisible: it must read like a natural human post first, and be search-friendly second.
 - Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
 - Write the SAME post in Khmer ("km") and English ("en"). They should convey the same content, localised — not a word-for-word translation.
 - Each version: 2–4 short sentences, friendly, appetising. One soft call-to-action (e.g. "Come try it today"). At most one relevant emoji per version.
@@ -177,7 +178,8 @@ IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
 
 REQUIREMENTS:
 - Apply the owner's instruction to the post. Keep whatever they did not ask to change. If they wrote entirely new content, base the post on that.
-- Naturally include the store name once; reflect the MEO keywords (translated). Do not keyword-stuff.
+- This is MEO content: keep it search-friendly so nearby customers find it. Include the store name once.
+- KEYWORD SELECTION: use ONLY the 1–2 MEO keywords that genuinely fit this post's content — never cram in all keywords, never force one that doesn't match the topic. Optimisation must stay invisible and read naturally.
 - Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
 - Keep the SAME post in Khmer ("km") and English ("en"), 2–4 short sentences each, friendly and appetising, one soft call-to-action, at most one emoji per version.
 - Also provide "body_owner": a faithful translation of the revised post into ${langLabel(
