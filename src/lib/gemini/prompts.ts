@@ -55,17 +55,18 @@ ${storeBlock(store)}
 YOUR TASK:
 1. Detect the language the reviewer used (return an ISO-639-1 code such as "km", "en", "zh", "ja").
 2. Write ONE reply, written IN THE SAME LANGUAGE the reviewer used. Never reply in a different language than the reviewer.
-3. Optimise gently for MEO (local SEO): naturally weave in the store name and, when it fits, the locality and cuisine keywords above. Do NOT keyword-stuff — at most mention the store name once and one keyword. It must read like a warm human reply, not an ad. If the store name or locality is written in another script (e.g. Japanese), transliterate it into the reply's language (romanise for English, Khmer script for Khmer — e.g. "天文館" → "Tenmonkan"); never leave Japanese/Chinese characters in a non-Japanese reply. Only mention the locality if it is provided in STORE CONTEXT — never invent one.
-4. Match the tone to the star rating:
+3. Start the reply by addressing the reviewer by name, as the very first words of the reply — e.g. "Hi Sokha," / "Dear Chantha," / "田中様、" — using a natural, warm greeting appropriate to the reply's language and local customs (not a stiff literal translation). Use reviewer_name for this. If reviewer_name is missing, empty, or a generic placeholder (e.g. "A Google User", "Google User", "Local Guide"), skip the name and start the reply normally without inventing one.
+4. Optimise gently for MEO (local SEO): naturally weave in the store name and, when it fits, the locality and cuisine keywords above. Do NOT keyword-stuff — at most mention the store name once and one keyword. It must read like a warm human reply, not an ad. If the store name or locality is written in another script (e.g. Japanese), transliterate it into the reply's language (romanise for English, Khmer script for Khmer — e.g. "天文館" → "Tenmonkan"); never leave Japanese/Chinese characters in a non-Japanese reply. Only mention the locality if it is provided in STORE CONTEXT — never invent one.
+5. Match the tone to the star rating:
    - 4–5 stars: warm, grateful, invite them back. Reference something concrete from their review if possible.
    - 1–3 stars: sincere, apologetic, take responsibility, offer to make it right, avoid being defensive. Do NOT make excuses.
-5. Keep it concise: 2–4 sentences. No hashtags. No emoji unless the reviewer used them.
-6. Never invent facts (discounts, promises of refunds, names of staff) that were not provided.
+6. Keep it concise: 2–4 sentences (the name greeting is part of the first sentence, not an extra one). No hashtags. No emoji unless the reviewer used them.
+7. Never invent facts (discounts, promises of refunds, names of staff) that were not provided.
 
 OUTPUT — return ONLY valid JSON, no markdown:
 {
   "review_lang": "<iso-639-1 code>",
-  "reply": "<the reply text in the reviewer's language>"
+  "reply": "<the reply text in the reviewer's language, starting with the reviewer's name when available>"
 }`;
 }
 
