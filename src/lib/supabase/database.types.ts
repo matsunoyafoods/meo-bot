@@ -22,6 +22,7 @@ export type OwnerStateMode =
   | "awaiting_category"
   | "awaiting_keywords"
   | "awaiting_area"
+  | "awaiting_store_name"
   | "awaiting_contact_message"
   | null;
 

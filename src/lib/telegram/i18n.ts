@@ -28,6 +28,9 @@ const ja: Dict = {
     "店舗のエリア（市区町村・地域名）を入力してください（例: 鹿児島市 天文館 / プノンペン BKK1）。投稿やMEOで地域名として使います。空欄にしたい場合は「なし」と入力。",
   area_saved: "✅ エリアを「{v}」に設定しました。",
   area_cleared: "✅ エリア設定を解除しました（地域名は使いません）。",
+  set_name: "🏪 店名を設定",
+  ask_name: "店名を入力してください（Googleマップに登録されている正式名がおすすめ。例: 麺屋あぶらや 天文館本店）。MEO診断・投稿・レポートで使います。",
+  name_saved: "✅ 店名を「{v}」に設定しました。",
   setup_prompt:
     "はじめに初期設定をしましょう。下のボタンから、母国語・ジャンル・キーワード・客単価を設定できます（後で /settings でも変更できます）。",
   choose_language: "通知・翻訳に使う母国語を選んでください。",
@@ -129,6 +132,9 @@ const en: Dict = {
     "Enter your area (city / district / neighborhood), e.g. “Tenmonkan, Kagoshima” or “BKK1, Phnom Penh”. It’s woven into posts and MEO. Type “none” to leave it unset.",
   area_saved: "✅ Area set to \"{v}\".",
   area_cleared: "✅ Area cleared (no locality will be used).",
+  set_name: "🏪 Set store name",
+  ask_name: "Enter your store name (ideally the exact name on Google Maps). It’s used in MEO diagnosis, posts and reports.",
+  name_saved: "✅ Store name set to \"{v}\".",
   setup_prompt:
     "Let's set things up first. Use the buttons below to set your language, genre, keywords and average ticket (you can change them later with /settings).",
   choose_language: "Choose the language for notifications and translations.",
@@ -230,6 +236,9 @@ const km: Dict = {
     "សូមបញ្ចូលតំបន់របស់អ្នក (ក្រុង/សង្កាត់/មូលដ្ឋាន) ឧ. «BKK1, ភ្នំពេញ»។ វានឹងត្រូវប្រើក្នុងការបង្ហោះ និង MEO។ វាយ «none» ដើម្បីទុកចោល។",
   area_saved: "✅ បានកំណត់តំបន់ទៅ «{v}»។",
   area_cleared: "✅ បានលុបតំបន់ (មិនប្រើឈ្មោះតំបន់ទេ)។",
+  set_name: "🏪 កំណត់ឈ្មោះហាង",
+  ask_name: "សូមបញ្ចូលឈ្មោះហាងរបស់អ្នក (ល្អបំផុតគឺឈ្មោះពិតប្រាកដនៅលើ Google Maps)។ វាប្រើក្នុងការវិនិច្ឆ័យ MEO ការបង្ហោះ និងរបាយការណ៍។",
+  name_saved: "✅ បានកំណត់ឈ្មោះហាងទៅ «{v}»។",
   setup_prompt:
     "ដំបូងសូមកំណត់ការកំណត់។ ប្រើប៊ូតុងខាងក្រោមដើម្បីកំណត់ភាសា ប្រភេទ ពាក្យគន្លឹះ និងតម្លៃមធ្យម (អាចផ្លាស់ប្តូរពេលក្រោយដោយ /settings)។",
   choose_language: "ជ្រើសរើសភាសាសម្រាប់ការជូនដំណឹង និងការបកប្រែ។",
@@ -331,6 +340,9 @@ const zh: Dict = {
     "请输入您的地区（城市/街区/地段），例如「鹿儿岛 天文馆」或「金边 BKK1」。将用于帖文和MEO。输入「none」可清空。",
   area_saved: "✅ 地区已设置为「{v}」。",
   area_cleared: "✅ 已清除地区（不使用地区名）。",
+  set_name: "🏪 设置店名",
+  ask_name: "请输入店名（建议与 Google 地图上的正式名称一致）。用于MEO诊断、帖文和报告。",
+  name_saved: "✅ 店名已设置为「{v}」。",
   setup_prompt:
     "先来做初始设置吧。用下方按钮设置语言、类别、关键词和客单价（之后可用 /settings 修改）。",
   choose_language: "请选择用于通知和翻译的语言。",

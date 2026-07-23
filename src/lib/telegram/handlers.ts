@@ -134,6 +134,9 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (state?.mode === "awaiting_area") {
     return handleAreaText(store, text);
   }
+  if (state?.mode === "awaiting_store_name") {
+    return handleStoreNameText(store, text);
+  }
   if (state?.mode === "awaiting_contact_message") {
     return handleContactText(store, chatId, text);
   }
@@ -323,6 +326,7 @@ async function cmdSettings(chatId: number): Promise<void> {
 /** 設定メニュー（言語・ジャンル・キーワード・客単価） */
 async function sendSettingsMenu(chatId: number, lang: OwnerLang, header?: string): Promise<void> {
   await sendMessage(chatId, header ?? t(lang, "settings_title"), [
+    [{ text: t(lang, "set_name"), callback_data: "set_name" }],
     [{ text: t(lang, "set_language"), callback_data: "set_lang_menu" }],
     [{ text: t(lang, "set_category"), callback_data: "set_category" }],
     [{ text: t(lang, "set_area"), callback_data: "set_area" }],
@@ -501,6 +505,16 @@ async function handleKeywordsText(store: StoreRow, text: string): Promise<void> 
   await sendMessage(store.telegram_chat_id!, t(lang, "keywords_saved"));
 }
 
+/* ---------- 店名テキスト入力 ---------- */
+async function handleStoreNameText(store: StoreRow, text: string): Promise<void> {
+  const lang = store.owner_lang;
+  const v = text.trim();
+  await clearOwnerState(store.id);
+  if (!v) return;
+  await updateStore(store.id, { name: v });
+  await sendMessage(store.telegram_chat_id!, t(lang, "name_saved", { v }));
+}
+
 /* ---------- エリア（市区町村）テキスト入力 ---------- */
 async function handleAreaText(store: StoreRow, text: string): Promise<void> {
   const lang = store.owner_lang;
@@ -659,6 +673,11 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
     await setOwnerState(store.id, "awaiting_area", {});
     await answerCallbackQuery(cb.id);
     return void sendMessage(chatId, t(store.owner_lang, "ask_area"));
+  }
+  if (data === "set_name") {
+    await setOwnerState(store.id, "awaiting_store_name", {});
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(chatId, t(store.owner_lang, "ask_name"));
   }
   if (data === "set_keywords") {
     await setOwnerState(store.id, "awaiting_keywords", {});

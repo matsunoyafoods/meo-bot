@@ -48,6 +48,7 @@ function mainMenu(store: Pick<StoreRow, "owner_lang" | "onboarded">): LineQuickA
 }
 function settingsMenu(lang: OwnerLang): LineQuickAction[] {
   return [
+    { label: t(lang, "set_name"), data: "set_name" },
     { label: t(lang, "set_language"), data: "set_lang_menu" },
     { label: t(lang, "set_category"), data: "set_category" },
     { label: t(lang, "set_area"), data: "set_area" },
@@ -66,9 +67,7 @@ function langMenu(): LineQuickAction[] {
 }
 
 async function reply(replyToken: string, text: string, quick?: LineQuickAction[]): Promise<boolean> {
-  const ok = await lineReply(replyToken, [textMessage(text, quick)]);
-  console.log("[line] reply", JSON.stringify({ ok, len: text.length, quick: quick?.length ?? 0 }));
-  return ok;
+  return lineReply(replyToken, [textMessage(text, quick)]);
 }
 
 /** グループなら groupId、そうでなければ userId を「このチャットの店舗ID」とする */
@@ -79,16 +78,6 @@ function chatIdOf(event: LineWebhookEvent): string | null {
 export async function handleLineEvent(event: LineWebhookEvent): Promise<void> {
   const replyToken = event.replyToken;
   const chatId = chatIdOf(event);
-  console.log(
-    "[line] event",
-    JSON.stringify({
-      type: event.type,
-      src: event.source?.type,
-      hasToken: Boolean(replyToken),
-      data: event.postback?.data,
-      text: event.message?.text?.slice(0, 30),
-    }),
-  );
   if (!chatId || !replyToken) return;
 
   // 友だち追加 / グループ参加 → ウェルカム＋メニュー
@@ -133,6 +122,15 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
     return void await reply(
       replyToken,
       clear || !text ? t(lang, "area_cleared") : t(lang, "area_saved", { v: text }),
+      mainMenu(store),
+    );
+  }
+  if (state?.mode === "awaiting_store_name") {
+    await clearOwnerState(store.id);
+    if (text) await updateStore(store.id, { name: text });
+    return void await reply(
+      replyToken,
+      text ? t(lang, "name_saved", { v: text }) : t(lang, "settings_title"),
       mainMenu(store),
     );
   }
@@ -185,6 +183,10 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
   if (data === "set_area") {
     await setOwnerState(store.id, "awaiting_area", {});
     return void await reply(replyToken, t(lang, "ask_area"));
+  }
+  if (data === "set_name") {
+    await setOwnerState(store.id, "awaiting_store_name", {});
+    return void await reply(replyToken, t(lang, "ask_name"));
   }
   if (data === "set_ticket") {
     await setOwnerState(store.id, "awaiting_ticket_amount", {});
@@ -259,7 +261,6 @@ async function sendGoogleConnect(store: StoreRow, replyToken: string): Promise<v
     .from("oauth_states")
     .insert({ state, platform: "line", line_user_id: store.line_user_id });
   if (insErr) console.error("[line] oauth_state insert failed:", JSON.stringify(insErr));
-  else console.log("[line] oauth_state saved", JSON.stringify({ line_user_id: store.line_user_id }));
   const url = buildAuthUrl(state);
   await reply(replyToken, t(lang, "welcome"), [{ label: t(lang, "connect_google"), url }]);
 }
