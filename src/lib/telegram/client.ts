@@ -182,6 +182,8 @@ export interface TgMessage {
   text?: string;
   /** グループにメンバー（Bot含む）が追加されたときのサービスメッセージ */
   new_chat_members?: TgUser[];
+  /** このメッセージが「返信(reply)」の場合、返信先の元メッセージ（問い合わせ転送の自動判定に使用） */
+  reply_to_message?: TgMessage;
 }
 export interface TgCallbackQuery {
   id: string;
