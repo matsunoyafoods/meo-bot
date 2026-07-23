@@ -133,8 +133,8 @@ REQUIREMENTS:
 - MEO / searchability: write so a nearby customer searching Google would find this. Naturally weave in the words people actually search for that FIT this post — the cuisine, the specific dish being featured, and (if known) the area. Include the store name once.
 - KEYWORD SELECTION (important): from the MEO keywords list, use ONLY the 1–2 keywords that genuinely match THIS post's topic. NEVER dump every keyword into the post, and NEVER force a keyword that doesn't fit the content — that reads as spam and hurts ranking. If a keyword is about ramen but the post is about the atmosphere, don't use it. Choose the keyword to fit the content, not the content to fit the keyword. The optimisation must be invisible: it must read like a natural human post first, and be search-friendly second.
 - Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
-- Each version: 2–4 short sentences, friendly, appetising. One soft call-to-action (e.g. "Come try it today"). At most one relevant emoji per version.
-- Google Business posts have a ~1500 character limit; stay well under it.
+- LENGTH: keep EACH language version concise — 1–3 short sentences. When there are 3 or more target languages, keep each version to 1–2 short sentences so all versions TOGETHER stay well under the 1500-character limit. One soft call-to-action (e.g. "Come try it today"). At most one relevant emoji per version.
+- Do NOT add language names, flags, or headers yourself (no "🇯🇵", no "Japanese:"). Output ONLY the post text for each language — the app adds the labels.
 ${ownerReviewLine(ownerLang, targetLangs)}
 - Return ONLY valid JSON, no markdown:
 {
@@ -207,8 +207,8 @@ REQUIREMENTS:
 - This is MEO content: keep it search-friendly so nearby customers find it. Include the store name once.
 - KEYWORD SELECTION: use ONLY the 1–2 MEO keywords that genuinely fit this post's content — never cram in all keywords, never force one that doesn't match the topic. Optimisation must stay invisible and read naturally.
 - Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
-- Each version: 2–4 short sentences, friendly and appetising, one soft call-to-action, at most one emoji per version.
-- Google Business posts have a ~1500 character limit; stay well under it.
+- LENGTH: keep EACH language version concise — 1–3 short sentences. When there are 3 or more target languages, keep each to 1–2 short sentences so all versions TOGETHER stay well under the 1500-character limit. One soft call-to-action, at most one emoji per version.
+- Do NOT add language names, flags, or headers yourself (no "🇯🇵", no "Japanese:"). Output ONLY the post text for each language — the app adds the labels.
 ${ownerReviewLine(ownerLang, targetLangs)}
 - Return ONLY valid JSON, no markdown:
 {

@@ -3,7 +3,7 @@
  * （PoC 用に手書き。本番では `supabase gen types typescript` に置き換え可）
  */
 
-export type OwnerLang = "ja" | "km" | "en" | "zh";
+export type OwnerLang = "ja" | "km" | "en" | "zh" | "ko";
 
 export type ReviewStatus =
   | "pending"

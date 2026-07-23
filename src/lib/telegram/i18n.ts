@@ -433,13 +433,121 @@ const zh: Dict = {
   payment_failed: "⚠️ 付款失败。请检查银行卡后通过 /subscribe 重试。",
 };
 
-const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh };
+const ko: Dict = {
+  welcome:
+    "환영합니다! Google 비즈니스 프로필과 연동하면 리뷰 답변·게시글·주간 리포트를 자동화할 수 있습니다.\n\n아래 버튼에서 Google과 연동해 주세요.",
+  connect_google: "🔗 Google 연동하기",
+  connected:
+    "✅ 연동이 완료되었습니다. 이제 새 리뷰를 자동으로 확인합니다. /settings 에서 언어와 객단가를 설정할 수 있습니다.",
+  settings_title: "⚙️ 매장 설정",
+  set_language: "🌐 사용 언어 설정",
+  set_ticket: "💵 객단가 설정",
+  set_category: "🍜 장르·상품 설정",
+  set_keywords: "🔑 키워드 설정",
+  ask_category:
+    "매장의 장르·주요 상품을 입력해 주세요(예: 라멘집, 카페, 고기집, 태국 요리). 게시글 생성에 사용됩니다.",
+  ask_keywords:
+    "게시글에 사용할 키워드를 입력해 주세요(쉼표로 구분. 예: 미소 라멘, 교자, 텐몬칸, 런치).",
+  category_saved: "✅ 장르·상품을 \"{v}\"(으)로 설정했습니다.",
+  keywords_saved: "✅ 키워드를 저장했습니다.",
+  set_area: "📍 지역(시·구·동) 설정",
+  ask_area:
+    "매장의 지역(시·구·동네명)을 입력해 주세요(예: 가고시마시 텐몬칸 / 프놈펜 BKK1). 게시글과 MEO에서 지역명으로 사용됩니다. 비워두려면 \"없음\"이라고 입력하세요.",
+  area_saved: "✅ 지역을 \"{v}\"(으)로 설정했습니다.",
+  area_cleared: "✅ 지역 설정을 해제했습니다(지역명을 사용하지 않습니다).",
+  set_name: "🏪 매장명 설정",
+  ask_name: "매장명을 입력해 주세요(Google 지도에 등록된 정식 명칭 권장. 예: 멘야 아부라야 텐몬칸 본점). MEO 진단·게시글·리포트에 사용됩니다.",
+  name_saved: "✅ 매장명을 \"{v}\"(으)로 설정했습니다.",
+  setup_prompt:
+    "먼저 초기 설정을 진행해 볼까요. 아래 버튼에서 사용 언어·장르·키워드·객단가를 설정할 수 있습니다(나중에 /settings 에서도 변경 가능).",
+  choose_language: "알림·번역에 사용할 언어를 선택해 주세요.",
+  lang_saved: "✅ 언어를 \"{lang}\"(으)로 설정했습니다.",
+  ask_ticket:
+    "객단가를 \"금액 통화\" 형식으로 보내 주세요. 통화는 자유입니다(예: 10 USD, 120 THB, 40000 KHR, 1500 JPY, 50000 VND).",
+  ticket_saved: "✅ 객단가를 {amount} {currency}(으)로 설정했습니다.",
+  ticket_invalid: "형식이 올바르지 않습니다. 예: 10 USD",
+  low_review_title: "별 {stars}개 리뷰가 도착했습니다",
+  original: "원본 리뷰",
+  translation: "번역 ({lang})",
+  draft_reply: "답변 초안 ({lang})",
+  btn_send: "🟢 이대로 보내기",
+  btn_edit: "✍️ 수정하기",
+  ask_edit:
+    "답변하고 싶은 내용을 본인의 말로 보내 주세요. 상대방 언어({lang})로 번역하여 전송합니다.",
+  edit_preview: "✍️ 수정된 답변 초안 ({lang})",
+  sent: "✅ Google 지도에 답변했습니다.",
+  skipped: "건너뛰었습니다.",
+  article_title: "📝 이번 주 게시글 초안",
+  btn_publish: "🟢 게시하기",
+  btn_skip: "⏭ 보류",
+  published: "✅ Google 비즈니스 프로필에 게시했습니다.",
+  not_connected: "먼저 Google과 연동해 주세요. /start 를 눌러 주세요.",
+  error: "⚠️ 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+  generating: "✍️ 게시글을 작성하고 있습니다…(잠시만 기다려 주세요)",
+  publish_needs_google:
+    "✅ 초안을 저장했습니다. Google 연동이 활성화되면 Google 비즈니스 프로필에 게시할 수 있습니다(현재 Google 승인 대기 중입니다).",
+  ask_post_keyword:
+    "게시하고 싶은 내용이나 키워드를 입력해 주세요(예: 금요일 한정 매운 미소 라멘 20% 할인, 주말 이벤트). AI가 게시글을 작성합니다.",
+  ask_post_edit:
+    "어떻게 고치고 싶은지 본인의 말로 보내 주세요(예: 더 캐주얼하게, 가격 추가, 주말 한정 강조). 내용을 반영해 초안을 다시 만듭니다.",
+  diagnose_running: "🔍 Google 지도 MEO 상태를 진단하고 있습니다…(잠시만 기다려 주세요)",
+  diagnose_not_found:
+    "매장의 Google 지도를 찾을 수 없습니다. 매장명을 정확히 설정하거나 Google 연동을 확인해 주세요.",
+  diagnose_title: "🔍 MEO 진단 리포트",
+  diagnose_score: "MEO 점수",
+  diagnose_good: "✅ 좋은 점",
+  diagnose_improve: "🚀 개선하면 더 성장합니다",
+  group_linked:
+    "✅ 이 그룹을 매장 \"{name}\"의 리포트 수신처로 등록했습니다. 주간·월간 리포트가 여기로 전송됩니다.",
+  group_invalid: "초대 링크가 유효하지 않습니다. 관리자에게 새 그룹 링크를 문의해 주세요.",
+  backlog_none: "미답변 리뷰가 없습니다. 모두 처리되었습니다.",
+  backlog_summary:
+    "📮 미답변 리뷰가 {total}건 있습니다.\n⭐ 4-5★: {high}건\n⚠️ 1-3★: {low}건\n\n어느 쪽부터 처리하시겠습니까?",
+  backlog_btn_high: "⭐ 4-5★ {n}건 답변 초안 작성",
+  backlog_btn_low: "⚠️ 1-3★ {n}건 확인",
+  backlog_high_ready:
+    "⭐ 4-5★ 답변 초안을 {n}건 작성했습니다. 내용을 확인하고 괜찮으면 \"모두 보내기\"를 눌러 주세요.",
+  backlog_btn_sendall: "🟢 모두 보내기",
+  backlog_btn_oneby: "✍️ 하나씩 확인하기",
+  backlog_sent: "✅ {n}건의 답변을 전송했습니다.",
+  backlog_low_intro: "⚠️ 1-3★을 하나씩 표시합니다({n}건). 각각 확인하고 전송해 주세요.",
+  backlog_more: "{n}건 남았습니다. /reviews 로 다시 이어서 진행할 수 있습니다.",
+  btn_skip_review: "⏭ 건너뛰기",
+  menu_title: "무엇을 하시겠습니까? 아래 버튼에서 선택하세요.",
+  menu_post: "📝 게시글 만들기",
+  menu_diagnose: "🔍 MEO 진단",
+  menu_reviews: "📮 미답변 리뷰",
+  menu_settings: "⚙️ 설정",
+  connection_ready:
+    "🎉 매장 데이터 연결이 완료되었습니다! Google 승인이 완료되어 리뷰 답변·게시글·주간 리포트를 이용하실 수 있습니다.\n\n/menu 에서 메뉴를 열 수 있습니다.",
+  trial_warn:
+    "⏳ 무료 기간이 {days}일 후({date}까지) 종료됩니다. 종료 후에는 자동으로 정지됩니다. 계속 이용을 원하시면 담당자에게 연락해 주세요.",
+  trial_ended:
+    "🔒 무료 기간이 종료되었습니다. 게시글·리뷰 답변·MEO 진단·리포트가 현재 정지되어 있습니다. 계속 이용하시려면 담당자에게 연락해 주세요.",
+  subscribe_cta: "💳 계속하기(신청)",
+  pay_link_msg: "신청은 이쪽입니다(월 $49·카드 결제). 아래 버튼에서 진행해 주세요.",
+  pay_link_btn: "💳 결제로 이동",
+  pay_unavailable: "현재 신청을 받을 수 없습니다. 담당자에게 연락해 주세요.",
+  manage_link_msg: "계약 관리·해지는 여기에서 하실 수 있습니다.",
+  manage_link_btn: "🧾 계약 관리·해지",
+  manage_unavailable: "아직 계약이 없습니다. 먼저 신청해 주세요.",
+  menu_contact: "📞 문의하기",
+  contact_prompt: "문의 내용을 입력하여 보내 주세요. 담당자에게 전달됩니다.",
+  contact_sent: "✅ 전송했습니다. 담당자가 회신드리겠습니다.",
+  contact_unavailable: "현재 문의를 받을 수 없습니다. 번거로우시겠지만 나중에 다시 시도해 주세요.",
+  subscribed_ok: "🎉 신청해 주셔서 감사합니다! 계속 이용하실 수 있습니다. /menu 에서 시작하세요.",
+  payment_ok: "✅ 결제를 확인했습니다. 감사합니다.",
+  payment_failed: "⚠️ 결제에 실패했습니다. 카드를 확인하신 후 /subscribe 에서 다시 시도해 주세요.",
+};
+
+const TABLE: Record<OwnerLang, Dict> = { ja, en, km, zh, ko };
 
 const LANG_NAME: Record<OwnerLang, string> = {
   ja: "日本語",
   en: "English",
   km: "ភាសាខ្មែរ",
   zh: "中文",
+  ko: "한국어",
 };
 
 export function t(

@@ -21,25 +21,76 @@ function pickTheme(seed: number): string {
   return THEMES[seed % THEMES.length];
 }
 
-/**
- * 店舗の市場に応じた「Google公開言語」を返す。
- * - LINE（日本市場）: 日本語のみ（MEO最優先）
- * - Telegram（カンボジア市場）: クメール語 + 英語
- * DBの posts.body_km を「主要言語スロット」、body_en を「副言語スロット」として使う。
- */
-export function postLangsForStore(store: Pick<StoreRow, "platform">): string[] {
-  return store.platform === "line" ? ["ja"] : ["km", "en"];
+interface PostLangConfig {
+  /** 生成する言語 */
+  langs: string[];
+  /**
+   * true = 全言語を1つの投稿にまとめて公開（国旗見出し付き）。body_km に結合文を格納。
+   * false = 言語ごとに別スロット（body_km=主, body_en=副）。
+   */
+  combined: boolean;
 }
 
-/** 生成結果(posts)を DBの2スロット(body_km=主, body_en=副)へ割り当てる */
+/**
+ * 店舗の市場に応じた「Google公開言語」設定を返す。
+ * - LINE（日本市場）: 日本語・英語・中国語・韓国語を1投稿に併記（国旗で区切る）
+ * - Telegram（カンボジア市場）: クメール語 + 英語（言語ごとに別スロット）
+ */
+export function postConfigForStore(store: Pick<StoreRow, "platform">): PostLangConfig {
+  return store.platform === "line"
+    ? { langs: ["ja", "en", "zh", "ko"], combined: true }
+    : { langs: ["km", "en"], combined: false };
+}
+
+const LANG_FLAG: Record<string, string> = {
+  ja: "🇯🇵",
+  en: "🇺🇸",
+  zh: "🇨🇳",
+  ko: "🇰🇷",
+  km: "🇰🇭",
+};
+const LANG_NATIVE: Record<string, string> = {
+  ja: "日本語",
+  en: "English",
+  zh: "中文",
+  ko: "한국어",
+  km: "ភាសាខ្មែរ",
+};
+
+/** 各言語版を国旗見出し＋改行で1つの投稿本文に結合（そのままGoogleへ公開） */
+function assembleCombined(posts: Record<string, string>, langs: string[]): string {
+  return langs
+    .map(
+      (l) =>
+        `${LANG_FLAG[l] ?? ""} ${LANG_NATIVE[l] ?? l}\n${(posts[l] ?? "").trim()}`,
+    )
+    .join("\n\n");
+}
+
+/** 生成結果(posts)を DBの2スロットへ割り当てる（combinedなら body_km に結合投稿） */
 function bodiesFromPosts(
   posts: Record<string, string>,
-  targetLangs: string[],
+  cfg: PostLangConfig,
 ): { body_km: string; body_en: string | null } {
+  if (cfg.combined) {
+    return { body_km: assembleCombined(posts, cfg.langs), body_en: null };
+  }
   return {
-    body_km: posts[targetLangs[0]] ?? "",
-    body_en: targetLangs[1] ? (posts[targetLangs[1]] ?? "") : null,
+    body_km: posts[cfg.langs[0]] ?? "",
+    body_en: cfg.langs[1] ? (posts[cfg.langs[1]] ?? "") : null,
   };
+}
+
+/** 既存下書き（DBの2スロット）を、編集プロンプトに渡す current_posts へ復元 */
+function currentPostsFor(post: PostRow, cfg: PostLangConfig): Record<string, string> {
+  if (cfg.combined) {
+    // 結合文には全言語が含まれるので、そのまま現状として渡す。
+    return { current: post.body_km ?? "" };
+  }
+  const cur: Record<string, string> = {};
+  cur[cfg.langs[0]] = post.body_km ?? "";
+  if (cfg.langs[1]) cur[cfg.langs[1]] = post.body_en ?? "";
+  return cur;
 }
 
 /**
@@ -62,15 +113,15 @@ export async function proposeArticle(store: StoreRow, theme: string): Promise<vo
   const supabase = createSupabaseAdminClient();
   const ctx = toStoreContext(store);
   const lang = store.owner_lang;
-  const targetLangs = postLangsForStore(store);
+  const cfg = postConfigForStore(store);
 
   const { topic, posts, body_owner } = await generateArticle(
     ctx,
     theme,
     lang,
-    targetLangs,
+    cfg.langs,
   );
-  const { body_km, body_en } = bodiesFromPosts(posts, targetLangs);
+  const { body_km, body_en } = bodiesFromPosts(posts, cfg);
 
   const insert: PostInsert = {
     store_id: store.id,
@@ -109,18 +160,16 @@ export async function reviseArticlePost(
   if (!post) throw new Error(`post ${postId} not found`);
 
   const ctx = toStoreContext(store);
-  const targetLangs = postLangsForStore(store);
-  const currentPosts: Record<string, string> = {};
-  currentPosts[targetLangs[0]] = post.body_km ?? "";
-  if (targetLangs[1]) currentPosts[targetLangs[1]] = post.body_en ?? "";
+  const cfg = postConfigForStore(store);
+  const currentPosts = currentPostsFor(post, cfg);
 
   const { topic, posts, body_owner } = await reviseArticle(
     ctx,
     { currentPosts, instruction },
     store.owner_lang,
-    targetLangs,
+    cfg.langs,
   );
-  const { body_km, body_en } = bodiesFromPosts(posts, targetLangs);
+  const { body_km, body_en } = bodiesFromPosts(posts, cfg);
 
   const { data: updated } = await supabase
     .from("posts")
@@ -140,29 +189,35 @@ async function sendPostDraft(
 ): Promise<void> {
   if (!storeHasChannel(store)) return;
   const lang = store.owner_lang;
-  const targetLangs = postLangsForStore(store);
+  const cfg = postConfigForStore(store);
 
-  // 公開言語の本文（body_km=主, body_en=副）をラベル付きで表示。
-  const bodies = [post.body_km, post.body_en];
-  const langBlocks: string[] = [];
-  targetLangs.forEach((code, i) => {
-    const body = bodies[i];
-    if (!body) return;
-    langBlocks.push(`<b>${langLabel(code)}:</b>`, escapeHtml(body), "");
-  });
+  let bodyBlocks: string[];
+  let ownerBlock: string[] = [];
 
-  // オーナー母国語版：公開言語に含まれない場合のみ確認用に先頭表示。
-  const ownerBlock =
-    bodyOwner && !targetLangs.includes(lang)
-      ? [`<b>${langLabel(lang)}:</b>`, escapeHtml(bodyOwner), ""]
-      : [];
+  if (cfg.combined) {
+    // body_km に国旗見出し付きの結合投稿が入っている。公開される内容そのままを表示。
+    bodyBlocks = [escapeHtml(post.body_km ?? "")];
+  } else {
+    // 言語ごとにラベル付きで表示（body_km=主, body_en=副）。
+    const bodies = [post.body_km, post.body_en];
+    bodyBlocks = [];
+    cfg.langs.forEach((code, i) => {
+      const body = bodies[i];
+      if (!body) return;
+      bodyBlocks.push(`<b>${langLabel(code)}:</b>`, escapeHtml(body), "");
+    });
+    // オーナー母国語版：公開言語に含まれない場合のみ確認用に先頭表示。
+    if (bodyOwner && !cfg.langs.includes(lang)) {
+      ownerBlock = [`<b>${langLabel(lang)}:</b>`, escapeHtml(bodyOwner), ""];
+    }
+  }
 
   const text = [
     `<b>${t(lang, "article_title")}</b>`,
     `<i>${escapeHtml(post.topic ?? "")}</i>`,
     "",
     ...ownerBlock,
-    ...langBlocks,
+    ...bodyBlocks,
   ]
     .join("\n")
     .trimEnd();

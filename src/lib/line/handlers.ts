@@ -62,8 +62,8 @@ function langMenu(): LineQuickAction[] {
   return [
     { label: "日本語", data: "set_lang:ja" },
     { label: "English", data: "set_lang:en" },
-    { label: "ភាសាខ្មែរ", data: "set_lang:km" },
     { label: "中文", data: "set_lang:zh" },
+    { label: "한국어", data: "set_lang:ko" },
   ];
 }
 
