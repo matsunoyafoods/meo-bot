@@ -117,7 +117,9 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
   }
   if (state?.mode === "awaiting_area") {
     const clear = /^(none|なし|無|no|N\/A)$/i.test(text);
-    await updateStore(store.id, { area: clear || !text ? null : text });
+    const patch: Partial<StoreRow> = { area: clear || !text ? null : text };
+    if (!store.google_location_id) patch.google_place_id = null; // エリア変更で再検索
+    await updateStore(store.id, patch);
     await clearOwnerState(store.id);
     return void await reply(
       replyToken,
@@ -127,7 +129,11 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
   }
   if (state?.mode === "awaiting_store_name") {
     await clearOwnerState(store.id);
-    if (text) await updateStore(store.id, { name: text });
+    if (text) {
+      const patch: Partial<StoreRow> = { name: text };
+      if (!store.google_location_id) patch.google_place_id = null; // 店名変更で再検索
+      await updateStore(store.id, patch);
+    }
     return void await reply(
       replyToken,
       text ? t(lang, "name_saved", { v: text }) : t(lang, "settings_title"),

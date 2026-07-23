@@ -511,7 +511,10 @@ async function handleStoreNameText(store: StoreRow, text: string): Promise<void>
   const v = text.trim();
   await clearOwnerState(store.id);
   if (!v) return;
-  await updateStore(store.id, { name: v });
+  // 店名変更 → 検索由来の place_id キャッシュを破棄（GBP連携済みなら保持）
+  const patch: Partial<StoreRow> = { name: v };
+  if (!store.google_location_id) patch.google_place_id = null;
+  await updateStore(store.id, patch);
   await sendMessage(store.telegram_chat_id!, t(lang, "name_saved", { v }));
 }
 
@@ -521,7 +524,9 @@ async function handleAreaText(store: StoreRow, text: string): Promise<void> {
   const v = text.trim();
   // 「なし / none / 無」で解除（都市名を使わない）
   const clear = /^(none|なし|無|no|N\/A)$/i.test(v);
-  await updateStore(store.id, { area: clear || !v ? null : v });
+  const patch: Partial<StoreRow> = { area: clear || !v ? null : v };
+  if (!store.google_location_id) patch.google_place_id = null; // エリア変更で再検索
+  await updateStore(store.id, patch);
   await clearOwnerState(store.id);
   await sendMessage(
     store.telegram_chat_id!,
