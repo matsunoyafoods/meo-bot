@@ -7,8 +7,10 @@ import {
   buildAndSendMonthlyReport,
 } from "@/lib/workflows/kpi-report";
 import { linkPendingStores } from "@/lib/workflows/reconcile";
+import { processNewReviews } from "@/lib/workflows/review-router";
 import { sendMessage } from "@/lib/telegram/client";
 import { t } from "@/lib/telegram/i18n";
+import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { trialDaysLeft, trialNotifyTarget, formatTrialDate } from "@/lib/trial";
 import { env } from "@/lib/env";
 import type { StoreRow } from "@/lib/supabase/database.types";
@@ -27,6 +29,7 @@ const MAX_STORES_PER_RUN = 8;
 /**
  * 日次ディスパッチャ（Vercel Hobby は cron 本数が少ないため1本に集約）。
  * カンボジア時間(UTC+7)で判定:
+ *  - 毎日     → 新着口コミ検知・承認依頼（機能②③）
  *  - 月/水/金 → 記事下書き生成（機能④）
  *  - 月曜     → 週報（機能⑥）
  *  - 毎月1日  → 前月分の月報（機能⑥）
@@ -40,6 +43,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   const weekday = local.getUTCDay(); // 0=日 .. 6=土
   const dayOfMonth = local.getUTCDate();
 
+  const doReviews = true; // 新着口コミ検知は毎日実行
   const doArticle = weekday === 1 || weekday === 3 || weekday === 5;
   const doWeekly = weekday === 1;
   const doMonthly = dayOfMonth === 1;
@@ -63,7 +67,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   let deferred = 0;
 
   // 店舗ごとの処理が必要な日だけ、店舗ループを回す
-  const doAny = doArticle || doWeekly || doMonthly;
+  const doAny = doReviews || doArticle || doWeekly || doMonthly;
   if (doAny) {
     // 対象: onboarded かつ 利用可能（停止中でなく期限内 or 期限なし）
     const usableFilter = `trial_ends_at.is.null,trial_ends_at.gt.${nowIso}`;
@@ -90,6 +94,15 @@ export async function GET(req: Request): Promise<NextResponse> {
 
     for (const store of batch) {
       const done: string[] = [];
+      if (doReviews) {
+        try {
+          await processNewReviews(store);
+          done.push("reviews");
+        } catch (e) {
+          console.error(`[cron/daily] reviews ${store.id}`, e);
+          done.push(`reviews:error`);
+        }
+      }
       if (doArticle) {
         try {
           await generateAndProposeArticle(store);
@@ -152,7 +165,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     ok: true,
     weekday,
     dayOfMonth,
-    ran: { doArticle, doWeekly, doMonthly },
+    ran: { doReviews, doArticle, doWeekly, doMonthly },
     reconcile,
     cap: MAX_STORES_PER_RUN,
     processed,
@@ -165,6 +178,7 @@ export async function GET(req: Request): Promise<NextResponse> {
 /**
  * 無料期間の予告通知（7日前/3日前/前日）と終了通知を、二重送信なく配信する。
  * 期限を延長（7日超先）した店舗は予告ステージをリセットする。
+ * Telegram/LINE 共通（deliverToStore 経由）。
  */
 async function runTrialNotifications(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
@@ -179,7 +193,7 @@ async function runTrialNotifications(
       .returns<StoreRow[]>();
 
     for (const store of stores ?? []) {
-      if (!store.telegram_chat_id || !store.trial_ends_at) continue;
+      if (!storeHasChannel(store) || !store.trial_ends_at) continue;
       const daysLeft = trialDaysLeft(store);
       const stage = store.trial_notify_stage ?? 0;
 
@@ -203,7 +217,7 @@ async function runTrialNotifications(
               date: formatTrialDate(store.trial_ends_at),
             });
       try {
-        await sendMessage(store.telegram_chat_id, msg);
+        await deliverToStore(store, msg);
       } catch (e) {
         console.error(`[cron/daily] trial notify ${store.id}`, e);
       }
