@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { exchangeCodeAndStore } from "@/lib/google/oauth";
 import { listAccounts, listLocations } from "@/lib/google/business";
-import { ensureStoreForChat } from "@/lib/repo";
-import { sendMessage } from "@/lib/telegram/client";
+import { ensureStoreForChat, ensureStoreForLineUser } from "@/lib/repo";
+import { deliverToStore } from "@/lib/messaging/deliver";
 import { t } from "@/lib/telegram/i18n";
 import type { StoreRow } from "@/lib/supabase/database.types";
 
@@ -26,16 +26,18 @@ export async function GET(req: Request): Promise<NextResponse> {
 
   const supabase = createSupabaseAdminClient();
 
-  // state → chat_id
+  // state → チャネル（Telegram / LINE）
   const { data: st } = await supabase
     .from("oauth_states")
-    .select("telegram_chat_id")
+    .select("telegram_chat_id, platform, line_user_id")
     .eq("state", state)
-    .maybeSingle<{ telegram_chat_id: number }>();
-  if (!st) return html("認証セッションが無効か期限切れです。/start からやり直してください。");
+    .maybeSingle<{ telegram_chat_id: number | null; platform: string | null; line_user_id: string | null }>();
+  if (!st) return html("認証セッションが無効か期限切れです。連携をやり直してください。");
 
-  const chatId = st.telegram_chat_id;
-  const store = await ensureStoreForChat(chatId);
+  const store =
+    st.platform === "line" && st.line_user_id
+      ? await ensureStoreForLineUser(st.line_user_id)
+      : await ensureStoreForChat(st.telegram_chat_id as number);
 
   // 1) トークン交換 + 保存（必須。ここが失敗したら本当のエラー）
   try {
@@ -82,16 +84,16 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
-  // 3) Telegram 通知
+  // 3) チャネルへ通知（Telegram / LINE）
   try {
-    await sendMessage(
-      chatId,
+    await deliverToStore(
+      store,
       locationLinked
         ? t(store.owner_lang, "connected")
         : "✅ Googleログインが完了しました。\n店舗データの接続は、Google Business Profile API の利用が承認され次第、自動で有効になります（現在は申請/審査待ちの状態です）。",
     );
   } catch (e) {
-    console.error("[oauth] telegram notify error", e);
+    console.error("[oauth] notify error", e);
   }
 
   return html(

@@ -15,6 +15,11 @@ import {
 import { t, langName } from "@/lib/telegram/i18n";
 import { sendMessage as tgSendMessage } from "@/lib/telegram/client";
 import { env } from "@/lib/env";
+import { randomUUID } from "node:crypto";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { buildAuthUrl } from "@/lib/google/oauth";
+import { isStoreUsable } from "@/lib/trial";
+import { runDiagnosis } from "@/lib/workflows/diagnose";
 import type { OwnerLang, StoreRow } from "@/lib/supabase/database.types";
 
 /**
@@ -26,15 +31,19 @@ import type { OwnerLang, StoreRow } from "@/lib/supabase/database.types";
  */
 
 /* ---------- メニュー（クイックリプライ） ---------- */
-function mainMenu(lang: OwnerLang): LineQuickAction[] {
-  return [
+function mainMenu(store: Pick<StoreRow, "owner_lang" | "onboarded">): LineQuickAction[] {
+  const lang = store.owner_lang;
+  const items: LineQuickAction[] = [];
+  if (!store.onboarded) items.push({ label: t(lang, "connect_google"), data: "connect_google" });
+  items.push(
     { label: t(lang, "menu_post"), data: "menu_post" },
     { label: t(lang, "menu_diagnose"), data: "menu_diagnose" },
     { label: t(lang, "menu_reviews"), data: "menu_reviews" },
     { label: t(lang, "menu_settings"), data: "menu_settings" },
     { label: t(lang, "subscribe_cta"), data: "subscribe" },
     { label: t(lang, "menu_contact"), data: "contact" },
-  ];
+  );
+  return items;
 }
 function settingsMenu(lang: OwnerLang): LineQuickAction[] {
   return [
@@ -72,7 +81,7 @@ export async function handleLineEvent(event: LineWebhookEvent): Promise<void> {
   // 友だち追加 / グループ参加 → ウェルカム＋メニュー
   if (event.type === "follow" || event.type === "join") {
     const store = await ensureStoreForLineUser(chatId);
-    await reply(replyToken, t(store.owner_lang, "menu_title"), mainMenu(store.owner_lang));
+    await reply(replyToken, t(store.owner_lang, "menu_title"), mainMenu(store));
     return;
   }
 
@@ -97,12 +106,12 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
   if (state?.mode === "awaiting_category") {
     await updateStore(store.id, { category: text });
     await clearOwnerState(store.id);
-    return void reply(replyToken, t(lang, "category_saved", { v: text }), mainMenu(lang));
+    return void reply(replyToken, t(lang, "category_saved", { v: text }), mainMenu(store));
   }
   if (state?.mode === "awaiting_keywords") {
     await updateStore(store.id, { keywords: text });
     await clearOwnerState(store.id);
-    return void reply(replyToken, t(lang, "keywords_saved"), mainMenu(lang));
+    return void reply(replyToken, t(lang, "keywords_saved"), mainMenu(store));
   }
   if (state?.mode === "awaiting_area") {
     const clear = /^(none|なし|無|no|N\/A)$/i.test(text);
@@ -111,13 +120,13 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
     return void reply(
       replyToken,
       clear || !text ? t(lang, "area_cleared") : t(lang, "area_saved", { v: text }),
-      mainMenu(lang),
+      mainMenu(store),
     );
   }
   if (state?.mode === "awaiting_ticket_amount") {
     await updateStore(store.id, { avg_ticket_amount: Number(text.replace(/[^\d.]/g, "")) || 0 });
     await clearOwnerState(store.id);
-    return void reply(replyToken, t(lang, "keywords_saved"), mainMenu(lang)); // 簡易確認
+    return void reply(replyToken, t(lang, "keywords_saved"), mainMenu(store)); // 簡易確認
   }
   if (state?.mode === "awaiting_contact_message") {
     await clearOwnerState(store.id);
@@ -125,12 +134,12 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
     return void reply(
       replyToken,
       text ? t(lang, "contact_sent") : t(lang, "contact_unavailable"),
-      mainMenu(lang),
+      mainMenu(store),
     );
   }
 
   // 状態なし → メニューを表示
-  await reply(replyToken, t(lang, "menu_title"), mainMenu(lang));
+  await reply(replyToken, t(lang, "menu_title"), mainMenu(store));
 }
 
 /* ---------- ボタン（postback） ---------- */
@@ -149,7 +158,7 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
     return void reply(
       replyToken,
       t(newLang, "lang_saved", { lang: langName(newLang) }),
-      mainMenu(newLang),
+      mainMenu({ owner_lang: newLang, onboarded: store.onboarded }),
     );
   }
   if (data === "set_category") {
@@ -172,17 +181,42 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
     await setOwnerState(store.id, "awaiting_contact_message", {});
     return void reply(replyToken, t(lang, "contact_prompt"));
   }
+  if (data === "connect_google") {
+    return void sendGoogleConnect(store, replyToken);
+  }
 
-  // Google連携が要る機能 / 課金は次段で接続
-  if (["menu_post", "menu_diagnose", "menu_reviews", "subscribe", "manage"].includes(data)) {
+  // MEO診断（公開マップをPlaces APIで診断。Google連携は不要）
+  if (data === "menu_diagnose") {
+    if (!isStoreUsable(store)) {
+      return void reply(replyToken, t(lang, "trial_ended"), mainMenu(store));
+    }
+    // 診断は数秒かかる。結果はプッシュで届く（runDiagnosis 内で配信）。
+    await runDiagnosis(store);
+    return;
+  }
+
+  // 投稿・口コミ・課金は次段で接続
+  if (["menu_post", "menu_reviews", "subscribe", "manage"].includes(data)) {
     return void reply(
       replyToken,
-      "この機能はまもなくLINEでもご利用いただけます（Google連携・お申し込みを準備中です）。今は「設定」と「問い合わせ」がご利用いただけます。",
-      mainMenu(lang),
+      "この機能はまもなくLINEでもご利用いただけます（準備中です）。今は「Google連携」「MEO診断」「設定」「問い合わせ」がご利用いただけます。",
+      mainMenu(store),
     );
   }
 
-  await reply(replyToken, t(lang, "menu_title"), mainMenu(lang));
+  await reply(replyToken, t(lang, "menu_title"), mainMenu(store));
+}
+
+/* ---------- Google連携リンクを送る（LINEの oauth_state を発行） ---------- */
+async function sendGoogleConnect(store: StoreRow, replyToken: string): Promise<void> {
+  const lang = store.owner_lang;
+  const state = randomUUID();
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("oauth_states")
+    .insert({ state, platform: "line", line_user_id: store.line_user_id });
+  const url = buildAuthUrl(state);
+  await reply(replyToken, t(lang, "welcome"), [{ label: t(lang, "connect_google"), url }]);
 }
 
 /* ---------- 問い合わせを管理者(Tom)のTelegramへ転送 ---------- */

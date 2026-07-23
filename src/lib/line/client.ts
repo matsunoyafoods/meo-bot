@@ -27,10 +27,12 @@ export function verifyLineSignature(rawBody: string, signature: string | null): 
 export interface LineQuickAction {
   /** タップで送られる表示テキスト or postback データ */
   label: string;
-  /** postback 用データ（Telegram の callback_data 相当）。無ければ message アクション。 */
+  /** postback 用データ（Telegram の callback_data 相当）。 */
   data?: string;
   /** message アクションのとき実際に送るテキスト（省略時は label） */
   text?: string;
+  /** uri アクション（リンクを開く。Google連携リンク等） */
+  url?: string;
 }
 export interface LineTextMessage {
   type: "text";
@@ -40,7 +42,8 @@ export interface LineTextMessage {
       type: "action";
       action:
         | { type: "message"; label: string; text: string }
-        | { type: "postback"; label: string; data: string; displayText?: string };
+        | { type: "postback"; label: string; data: string; displayText?: string }
+        | { type: "uri"; label: string; uri: string };
     }>;
   };
 }
@@ -50,12 +53,16 @@ export function textMessage(text: string, quick?: LineQuickAction[]): LineTextMe
   const msg: LineTextMessage = { type: "text", text };
   if (quick?.length) {
     msg.quickReply = {
-      items: quick.slice(0, 13).map((q) => ({
-        type: "action",
-        action: q.data
-          ? { type: "postback", label: q.label.slice(0, 20), data: q.data, displayText: q.label }
-          : { type: "message", label: q.label.slice(0, 20), text: q.text ?? q.label },
-      })),
+      items: quick.slice(0, 13).map((q) => {
+        const label = q.label.slice(0, 20);
+        if (q.url) return { type: "action" as const, action: { type: "uri" as const, label, uri: q.url } };
+        if (q.data)
+          return {
+            type: "action" as const,
+            action: { type: "postback" as const, label, data: q.data, displayText: q.label },
+          };
+        return { type: "action" as const, action: { type: "message" as const, label, text: q.text ?? q.label } };
+      }),
     };
   }
   return msg;

@@ -3,26 +3,25 @@ import type { StoreRow } from "@/lib/supabase/database.types";
 import { findPlaceId, getPlaceSnapshot } from "@/lib/google/places";
 import { diagnoseMeo, type MeoDiagnosis } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
-import { sendMessage } from "@/lib/telegram/client";
+import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { t } from "@/lib/telegram/i18n";
 
 const IMPACT_MARK: Record<string, string> = { high: "🔴", medium: "🟡", low: "⚪" };
 
 /**
  * 機能⑦: MEO診断。
- * 店舗の Google マップ現状（Places API）を取得 → Gemini が改善提案 → Telegram 配信。
+ * 店舗の Google マップ現状（Places API）を取得 → Gemini が改善提案 → チャネルへ配信（Telegram/LINE）。
  */
 export async function runDiagnosis(store: StoreRow): Promise<void> {
-  if (!store.telegram_chat_id) return;
-  const chatId = store.telegram_chat_id;
+  if (!storeHasChannel(store)) return;
   const lang = store.owner_lang;
 
-  await sendMessage(chatId, t(lang, "diagnose_running"));
+  await deliverToStore(store, t(lang, "diagnose_running"));
 
-  // 1) place_id を解決（キャッシュ優先。無ければ店名＋地域でテキスト検索）
+  // 1) place_id を解決（キャッシュ優先。無ければ店名（＋設定エリア）でテキスト検索）
   let placeId = store.google_place_id;
   if (!placeId) {
-    const query = `${store.name ?? ""} Phnom Penh Cambodia`.trim();
+    const query = `${store.name ?? ""} ${store.area ?? ""}`.trim();
     placeId = await findPlaceId(query);
     if (placeId) {
       const supabase = createSupabaseAdminClient();
@@ -30,7 +29,7 @@ export async function runDiagnosis(store: StoreRow): Promise<void> {
     }
   }
   if (!placeId) {
-    await sendMessage(chatId, t(lang, "diagnose_not_found"));
+    await deliverToStore(store, t(lang, "diagnose_not_found"));
     return;
   }
 
@@ -38,7 +37,7 @@ export async function runDiagnosis(store: StoreRow): Promise<void> {
   const snapshot = await getPlaceSnapshot(placeId);
   const diag = await diagnoseMeo(toStoreContext(store), snapshot, lang);
 
-  await sendMessage(chatId, formatDiagnosis(lang, diag, snapshot.name));
+  await deliverToStore(store, formatDiagnosis(lang, diag, snapshot.name));
 }
 
 function formatDiagnosis(
