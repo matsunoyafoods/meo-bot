@@ -118,18 +118,18 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
   if (state?.mode === "awaiting_category") {
     await updateStore(store.id, { category: text });
     await clearOwnerState(store.id);
-    return void reply(replyToken, t(lang, "category_saved", { v: text }), mainMenu(store));
+    return void await reply(replyToken, t(lang, "category_saved", { v: text }), mainMenu(store));
   }
   if (state?.mode === "awaiting_keywords") {
     await updateStore(store.id, { keywords: text });
     await clearOwnerState(store.id);
-    return void reply(replyToken, t(lang, "keywords_saved"), mainMenu(store));
+    return void await reply(replyToken, t(lang, "keywords_saved"), mainMenu(store));
   }
   if (state?.mode === "awaiting_area") {
     const clear = /^(none|なし|無|no|N\/A)$/i.test(text);
     await updateStore(store.id, { area: clear || !text ? null : text });
     await clearOwnerState(store.id);
-    return void reply(
+    return void await reply(
       replyToken,
       clear || !text ? t(lang, "area_cleared") : t(lang, "area_saved", { v: text }),
       mainMenu(store),
@@ -138,12 +138,12 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
   if (state?.mode === "awaiting_ticket_amount") {
     await updateStore(store.id, { avg_ticket_amount: Number(text.replace(/[^\d.]/g, "")) || 0 });
     await clearOwnerState(store.id);
-    return void reply(replyToken, t(lang, "keywords_saved"), mainMenu(store)); // 簡易確認
+    return void await reply(replyToken, t(lang, "keywords_saved"), mainMenu(store)); // 簡易確認
   }
   if (state?.mode === "awaiting_contact_message") {
     await clearOwnerState(store.id);
     await forwardContact(store, text);
-    return void reply(
+    return void await reply(
       replyToken,
       text ? t(lang, "contact_sent") : t(lang, "contact_unavailable"),
       mainMenu(store),
@@ -159,15 +159,15 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
   const lang = store.owner_lang;
 
   if (data === "menu_settings") {
-    return void reply(replyToken, t(lang, "settings_title"), settingsMenu(lang));
+    return void await reply(replyToken, t(lang, "settings_title"), settingsMenu(lang));
   }
   if (data === "set_lang_menu") {
-    return void reply(replyToken, t(lang, "set_language"), langMenu());
+    return void await reply(replyToken, t(lang, "set_language"), langMenu());
   }
   if (data.startsWith("set_lang:")) {
     const newLang = data.split(":")[1] as OwnerLang;
     await updateStore(store.id, { owner_lang: newLang });
-    return void reply(
+    return void await reply(
       replyToken,
       t(newLang, "lang_saved", { lang: langName(newLang) }),
       mainMenu({ owner_lang: newLang, onboarded: store.onboarded }),
@@ -175,32 +175,32 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
   }
   if (data === "set_category") {
     await setOwnerState(store.id, "awaiting_category", {});
-    return void reply(replyToken, t(lang, "ask_category"));
+    return void await reply(replyToken, t(lang, "ask_category"));
   }
   if (data === "set_keywords") {
     await setOwnerState(store.id, "awaiting_keywords", {});
-    return void reply(replyToken, t(lang, "ask_keywords"));
+    return void await reply(replyToken, t(lang, "ask_keywords"));
   }
   if (data === "set_area") {
     await setOwnerState(store.id, "awaiting_area", {});
-    return void reply(replyToken, t(lang, "ask_area"));
+    return void await reply(replyToken, t(lang, "ask_area"));
   }
   if (data === "set_ticket") {
     await setOwnerState(store.id, "awaiting_ticket_amount", {});
-    return void reply(replyToken, t(lang, "ask_ticket"));
+    return void await reply(replyToken, t(lang, "ask_ticket"));
   }
   if (data === "contact") {
     await setOwnerState(store.id, "awaiting_contact_message", {});
-    return void reply(replyToken, t(lang, "contact_prompt"));
+    return void await reply(replyToken, t(lang, "contact_prompt"));
   }
   if (data === "connect_google") {
-    return void sendGoogleConnect(store, replyToken);
+    return void await sendGoogleConnect(store, replyToken);
   }
 
   // MEO診断（公開マップをPlaces APIで診断。Google連携は不要）
   if (data === "menu_diagnose") {
     if (!isStoreUsable(store)) {
-      return void reply(replyToken, t(lang, "trial_ended"), mainMenu(store));
+      return void await reply(replyToken, t(lang, "trial_ended"), mainMenu(store));
     }
     // 診断は数秒かかる。結果はプッシュで届く（runDiagnosis 内で配信）。
     await runDiagnosis(store);
@@ -209,7 +209,7 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
 
   // 投稿・口コミ・課金は次段で接続
   if (["menu_post", "menu_reviews", "subscribe", "manage"].includes(data)) {
-    return void reply(
+    return void await reply(
       replyToken,
       "この機能はまもなくLINEでもご利用いただけます（準備中です）。今は「Google連携」「MEO診断」「設定」「問い合わせ」がご利用いただけます。",
       mainMenu(store),
