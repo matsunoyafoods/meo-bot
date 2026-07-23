@@ -57,6 +57,8 @@ const ja: Dict = {
   not_connected: "先にGoogleと連携してください。/start を押してください。",
   error: "⚠️ エラーが発生しました。時間をおいて再度お試しください。",
   generating: "✍️ 投稿文を作成しています…（少々お待ちください）",
+  publish_needs_google:
+    "✅ 下書きを保存しました。Google連携が有効になると、Googleビジネスプロフィールへ公開できます（現在はGoogle側の利用承認待ちです）。",
   ask_post_keyword:
     "投稿したい内容やキーワードを入力してください（例: 金曜限定 辛味噌ラーメン 20%OFF、週末イベント）。AIが投稿文を作成します。",
   ask_post_edit:
@@ -162,6 +164,8 @@ const en: Dict = {
   not_connected: "Please connect Google first. Tap /start.",
   error: "⚠️ Something went wrong. Please try again later.",
   generating: "✍️ Creating your post… (this takes a moment)",
+  publish_needs_google:
+    "✅ Draft saved. Once your Google connection is active, it can be published to your Google Business Profile (currently pending Google approval).",
   ask_post_keyword:
     "Type the content or keywords you want to post (e.g. Friday-only spicy miso ramen 20% off, weekend event). The AI will write the post.",
   ask_post_edit:
@@ -267,6 +271,8 @@ const km: Dict = {
   not_connected: "សូមភ្ជាប់ Google ជាមុនសិន។ ចុច /start។",
   error: "⚠️ មានបញ្ហា។ សូមព្យាយាមម្តងទៀត។",
   generating: "✍️ កំពុងបង្កើតអត្ថបទ… (សូមរង់ចាំបន្តិច)",
+  publish_needs_google:
+    "✅ បានរក្សាទុកសេចក្តីព្រាង។ នៅពេលការភ្ជាប់ Google សកម្ម វានឹងអាចផ្សាយទៅ Google Business Profile (បច្ចុប្បន្នកំពុងរង់ចាំការអនុម័តពី Google)។",
   ask_post_keyword:
     "សូមបញ្ចូលខ្លឹមសារ ឬពាក្យគន្លឹះដែលអ្នកចង់បង្ហោះ (ឧ. រ៉ាមេនម្សៅហឹរ តែថ្ងៃសុក្រ បញ្ចុះ 20%, ព្រឹត្តិការណ៍ចុងសប្តាហ៍)។ AI នឹងសរសេរអត្ថបទ។",
   ask_post_edit:
@@ -371,6 +377,8 @@ const zh: Dict = {
   not_connected: "请先连接 Google。点击 /start。",
   error: "⚠️ 出现错误，请稍后再试。",
   generating: "✍️ 正在生成帖子内容…（请稍候）",
+  publish_needs_google:
+    "✅ 草稿已保存。Google 连接生效后即可发布到 Google 商家资料（目前正在等待 Google 审批）。",
   ask_post_keyword:
     "请输入您想发布的内容或关键词（例：仅限周五的辣味噌拉面 20% 折扣、周末活动）。AI 将撰写帖文。",
   ask_post_edit:

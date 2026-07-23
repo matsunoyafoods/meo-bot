@@ -271,27 +271,26 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
     ]);
   }
 
-  // 投稿: キーワード入力を促す（生成はテキスト受信時に実行）
+  // 投稿: キーワード入力を促す（下書き生成はGoogle連携不要。公開時のみ連携が必要）
   if (data === "menu_post") {
     if (!isStoreUsable(store)) {
       return void await reply(replyToken, t(lang, "trial_ended"), mainMenu(store));
     }
-    // 投稿はGoogle連携が必要。未連携なら連携リンクを案内。
-    if (!store.onboarded) {
-      return void await sendGoogleConnect(store, replyToken);
-    }
     await setOwnerState(store.id, "awaiting_post_keyword", {});
     return void await reply(replyToken, t(lang, "ask_post_keyword"));
   }
-  // 記事: 投稿する
+  // 記事: 投稿する（公開はGoogle連携が必要。未連携なら下書き保存＋案内）
   if (data.startsWith("post_pub:")) {
     const postId = data.split(":")[1];
+    if (!store.onboarded) {
+      return void await reply(replyToken, t(lang, "publish_needs_google"), mainMenu(store));
+    }
     try {
       await publishPost(postId);
       return void await reply(replyToken, t(lang, "published"), mainMenu(store));
     } catch (e) {
       console.error("[line] publish error", e);
-      return void await reply(replyToken, t(lang, "error"), mainMenu(store));
+      return void await reply(replyToken, t(lang, "publish_needs_google"), mainMenu(store));
     }
   }
   // 記事: 編集指示を促す

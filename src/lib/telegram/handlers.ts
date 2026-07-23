@@ -711,11 +711,7 @@ async function handleCallback(cb: TgCallbackQuery): Promise<void> {
       await answerCallbackQuery(cb.id);
       return void sendMessage(chatId, t(store.owner_lang, "trial_ended"));
     }
-    // 投稿はGoogle連携が必要
-    if (!store.onboarded) {
-      await answerCallbackQuery(cb.id);
-      return void sendMessage(chatId, t(store.owner_lang, "not_connected"));
-    }
+    // 下書き生成はGoogle連携不要（公開時のみ連携が必要）
     await setOwnerState(store.id, "awaiting_post_keyword", {});
     await answerCallbackQuery(cb.id);
     return void sendMessage(chatId, t(store.owner_lang, "ask_post_keyword"));
@@ -851,6 +847,10 @@ async function publishNow(
   cb: TgCallbackQuery,
 ): Promise<void> {
   const lang = store.owner_lang;
+  if (!store.onboarded) {
+    await answerCallbackQuery(cb.id);
+    return void sendMessage(store.telegram_chat_id!, t(lang, "publish_needs_google"));
+  }
   try {
     await publishPost(postId);
     await answerCallbackQuery(cb.id, t(lang, "published"));
@@ -858,7 +858,8 @@ async function publishNow(
     await sendMessage(store.telegram_chat_id!, t(lang, "published"));
   } catch (err) {
     console.error("[telegram] publish error", err);
-    await answerCallbackQuery(cb.id, t(lang, "error"));
+    await sendMessage(store.telegram_chat_id!, t(lang, "publish_needs_google"));
+    await answerCallbackQuery(cb.id);
   }
 }
 
