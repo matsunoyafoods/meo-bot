@@ -7,6 +7,8 @@ import {
 import {
   ensureStoreForLineUser,
   getStoreByLineUser,
+  getStoreByLineChat,
+  linkLineChatToStore,
   getOwnerState,
   setOwnerState,
   clearOwnerState,
@@ -84,31 +86,72 @@ async function reply(replyToken: string, text: string, quick?: LineQuickAction[]
   return lineReply(replyToken, [textMessage(text, quick)]);
 }
 
-/** グループなら groupId、そうでなければ userId を「このチャットの店舗ID」とする */
-function chatIdOf(event: LineWebhookEvent): string | null {
-  return event.source?.groupId ?? event.source?.userId ?? null;
+/**
+ * イベントから「対象の店舗」を解決する。
+ * - 1対1（userId）: そのユーザーの店舗（無ければ作成）＝オーナーの唯一の店舗。
+ * - グループ（groupId）: 別店舗は作らない。line_chats でオーナー店舗を参照。
+ *   未紐づけなら、発話者(userId)がオーナー(bot友だち追加済み=userIdが取れる)であれば
+ *   そのグループをオーナー店舗へ自動紐づけする。判定できなければ null。
+ */
+async function resolveStoreForEvent(
+  event: LineWebhookEvent,
+): Promise<{ store: StoreRow | null; inGroup: boolean }> {
+  const groupId = event.source?.groupId;
+  const userId = event.source?.userId;
+
+  if (!groupId) {
+    if (!userId) return { store: null, inGroup: false };
+    return { store: await ensureStoreForLineUser(userId), inGroup: false };
+  }
+
+  // グループ: 既に紐づいていればその店舗
+  const linked = await getStoreByLineChat(groupId);
+  if (linked) return { store: linked, inGroup: true };
+
+  // 未紐づけ: 発話者がオーナー（1対1で登録済み）なら自動紐づけ
+  if (userId) {
+    const ownerStore = await getStoreByLineUser(userId);
+    if (ownerStore) {
+      await linkLineChatToStore(groupId, ownerStore.id, "group");
+      return { store: ownerStore, inGroup: true };
+    }
+  }
+  return { store: null, inGroup: true };
 }
 
 export async function handleLineEvent(event: LineWebhookEvent): Promise<void> {
   const replyToken = event.replyToken;
-  const chatId = chatIdOf(event);
-  if (!chatId || !replyToken) return;
+  if (!replyToken) return;
 
-  // 友だち追加 / グループ参加 → ウェルカム＋メニュー
-  if (event.type === "follow" || event.type === "join") {
-    const store = await ensureStoreForLineUser(chatId);
+  const { store, inGroup } = await resolveStoreForEvent(event);
+
+  // グループ参加 → 紐づけ済みならメニュー、未紐づけならオーナーに発言を促す
+  if (event.type === "join") {
+    if (store) {
+      await reply(replyToken, t(store.owner_lang, "menu_title"), mainMenu(store));
+    } else {
+      await reply(replyToken, t("ja", "group_link_hint"));
+    }
+    return;
+  }
+
+  // グループで店舗が未解決 → 紐づけ案内（オーナーが一度発言すれば紐づく）
+  if (!store) {
+    if (inGroup && event.type === "message") {
+      await reply(replyToken, t("ja", "group_link_hint"));
+    }
+    return;
+  }
+
+  if (event.type === "follow") {
     await reply(replyToken, t(store.owner_lang, "menu_title"), mainMenu(store));
     return;
   }
-
   if (event.type === "message") {
-    const store = await ensureStoreForLineUser(chatId);
     await handleLineText(store, replyToken, (event.message?.text ?? "").trim());
     return;
   }
-
   if (event.type === "postback") {
-    const store = (await getStoreByLineUser(chatId)) ?? (await ensureStoreForLineUser(chatId));
     await handleLinePostback(store, replyToken, event.postback?.data ?? "");
     return;
   }

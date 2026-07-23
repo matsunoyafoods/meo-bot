@@ -74,6 +74,8 @@ const ja: Dict = {
   group_linked:
     "✅ このグループを店舗「{name}」のレポート配信先に登録しました。週次・月次レポートがここに届きます。",
   group_invalid: "招待リンクが無効です。管理者に新しいグループ用リンクをご確認ください。",
+  group_link_hint:
+    "このグループをあなたのお店に連携します。お店のオーナー（このLINE公式アカウントを友だち追加済みの方）が、このグループで一度なにかメッセージを送ってください。連携後は、1対1トークと同じ設定・お店の情報のまま、グループからも操作できます。",
   backlog_none: "未返信の口コミはありません。すべて対応済みです。",
   backlog_summary:
     "📮 未返信の口コミが {total} 件あります。\n⭐ 4-5★: {high} 件\n⚠️ 1-3★: {low} 件\n\nどちらから対応しますか？",
@@ -182,6 +184,8 @@ const en: Dict = {
   group_linked:
     "✅ This group is now a report channel for \"{name}\". Weekly and monthly reports will arrive here.",
   group_invalid: "Invalid invite link. Please ask the admin for a new group link.",
+  group_link_hint:
+    "To link this group to your store, the store owner (someone who has added this LINE official account as a friend) just needs to send any message in this group once. After linking, the group shares the same settings and store info as the 1:1 chat, and you can operate from here too.",
   backlog_none: "No unreplied reviews. You're all caught up.",
   backlog_summary:
     "📮 You have {total} unreplied reviews.\n⭐ 4-5★: {high}\n⚠️ 1-3★: {low}\n\nWhich would you like to handle?",
@@ -290,6 +294,8 @@ const km: Dict = {
   group_linked:
     "✅ ក្រុមនេះត្រូវបានចុះឈ្មោះជាកន្លែងទទួលរបាយការណ៍សម្រាប់ហាង «{name}»។ របាយការណ៍ប្រចាំសប្តាហ៍/ខែ នឹងមកដល់ទីនេះ។",
   group_invalid: "តំណអញ្ជើញមិនត្រឹមត្រូវ។ សូមសុំតំណក្រុមថ្មីពីអ្នកគ្រប់គ្រង។",
+  group_link_hint:
+    "ដើម្បីភ្ជាប់ក្រុមនេះទៅហាងរបស់អ្នក សូមឲ្យម្ចាស់ហាង (អ្នកដែលបានបន្ថែម LINE official account នេះជាមិត្ត) ផ្ញើសារណាមួយនៅក្នុងក្រុមនេះម្តង។ បន្ទាប់ពីភ្ជាប់ ក្រុមនឹងប្រើការកំណត់ និងព័ត៌មានហាងដូចគ្នានឹងការជជែក 1-1 ដែរ។",
   backlog_none: "គ្មានមតិដែលមិនទាន់ឆ្លើយតបទេ។ អ្នកបានដោះស្រាយអស់ហើយ។",
   backlog_summary:
     "📮 មានមតិមិនទាន់ឆ្លើយតប {total} ។\n⭐ 4-5★: {high}\n⚠️ 1-3★: {low}\n\nចង់ដោះស្រាយមួយណាមុន?",
@@ -397,6 +403,8 @@ const zh: Dict = {
   group_linked:
     "✅ 本群已登记为店铺「{name}」的报告接收群。周报和月报将发送到这里。",
   group_invalid: "邀请链接无效。请向管理员索取新的群链接。",
+  group_link_hint:
+    "要将此群组关联到您的店铺，店主（已将此 LINE 官方账号加为好友的人）只需在此群组中发送任意一条消息即可。关联后，群组将与一对一聊天共享相同的设置和店铺信息，也可从群组进行操作。",
   backlog_none: "没有未回复的评论，全部已处理。",
   backlog_summary:
     "📮 有 {total} 条未回复的评论。\n⭐ 4-5★: {high}\n⚠️ 1-3★: {low}\n\n先处理哪一类？",
@@ -505,6 +513,8 @@ const ko: Dict = {
   group_linked:
     "✅ 이 그룹을 매장 \"{name}\"의 리포트 수신처로 등록했습니다. 주간·월간 리포트가 여기로 전송됩니다.",
   group_invalid: "초대 링크가 유효하지 않습니다. 관리자에게 새 그룹 링크를 문의해 주세요.",
+  group_link_hint:
+    "이 그룹을 매장에 연동하려면, 매장 오너(이 LINE 공식 계정을 친구 추가한 분)가 이 그룹에서 아무 메시지나 한 번 보내 주세요. 연동 후에는 1:1 대화와 동일한 설정·매장 정보로 그룹에서도 조작할 수 있습니다.",
   backlog_none: "미답변 리뷰가 없습니다. 모두 처리되었습니다.",
   backlog_summary:
     "📮 미답변 리뷰가 {total}건 있습니다.\n⭐ 4-5★: {high}건\n⚠️ 1-3★: {low}건\n\n어느 쪽부터 처리하시겠습니까?",

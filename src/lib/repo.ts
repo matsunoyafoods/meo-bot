@@ -112,6 +112,38 @@ export async function getStoreByInviteToken(token: string): Promise<StoreRow | n
   return data ?? null;
 }
 
+/**
+ * LINE グループ(groupId)→店舗 の対応を取得。
+ * グループは別店舗を作らず、この対応表でオーナーの店舗を参照する。
+ */
+export async function getStoreByLineChat(lineId: string): Promise<StoreRow | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from("line_chats")
+    .select("store_id")
+    .eq("line_id", lineId)
+    .maybeSingle<{ store_id: string }>();
+  if (!data) return null;
+  const { data: store } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("id", data.store_id)
+    .maybeSingle<StoreRow>();
+  return store ?? null;
+}
+
+/** LINE グループ(groupId)を既存の店舗に紐づける（重複は上書き） */
+export async function linkLineChatToStore(
+  lineId: string,
+  storeId: string,
+  kind: "group" | "user" = "group",
+): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("line_chats")
+    .upsert({ line_id: lineId, store_id: storeId, kind }, { onConflict: "line_id" });
+}
+
 /** グループ等のレポート配信先を登録（重複は無視） */
 export async function addReportChat(
   storeId: string,
