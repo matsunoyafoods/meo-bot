@@ -6,6 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { t } from "@/lib/telegram/i18n";
 import type { StoreRow } from "@/lib/supabase/database.types";
+import { ONE_TIME_BONUS, RECURRING_BONUS } from "@/lib/admin-reps";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,7 +76,10 @@ async function handleEvent(event: Stripe.Event, supabase: Supa): Promise<void> {
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice;
       const subId = invoiceSubId(invoice);
-      if (subId) await syncSubscription(subId, supabase, true);
+      if (subId) {
+        await syncSubscription(subId, supabase, true);
+        await recordRepCommission(invoice, subId, supabase);
+      }
       return;
     }
 
@@ -142,6 +146,52 @@ async function syncSubscription(subId: string, supabase: Supa, notifyStore: bool
     } catch (e) {
       console.error("[stripe] payment_ok notify", e);
     }
+  }
+}
+
+/**
+ * 営業マン報酬の確定記録（実際にStripeの引き落としが成功したイベントごとに1行）。
+ * invoice.paid のたびに呼ぶ。billing_reason で新規契約か継続かを判定する:
+ *  - subscription_create（新規契約の初回請求） → one_time ($20)
+ *  - subscription_cycle（通常の月次更新）      → recurring ($5、21件目以降のみ実際に支払対象。
+ *    判定は admin-reps.ts の集計側で行うため、ここでは金額を仮置きして記録するだけ)
+ * それ以外の billing_reason（proration等）は対象外。
+ * stripe_invoice_id に unique 制約があるため、Webhookの再送があっても二重計上されない。
+ */
+async function recordRepCommission(invoice: Stripe.Invoice, subId: string, supabase: Supa): Promise<void> {
+  const reason = invoice.billing_reason;
+  let kind: "one_time" | "recurring";
+  if (reason === "subscription_create") {
+    kind = "one_time";
+  } else if (reason === "subscription_cycle") {
+    kind = "recurring";
+  } else {
+    return;
+  }
+
+  const invoiceId = invoice.id;
+  if (!invoiceId) return;
+
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id,sales_rep_id")
+    .eq("stripe_subscription_id", subId)
+    .maybeSingle<Pick<StoreRow, "id" | "sales_rep_id">>();
+  if (!store || !store.sales_rep_id) return; // 担当営業マンがいない店舗は対象外
+
+  const paidAtUnix = invoice.status_transitions?.paid_at ?? invoice.created;
+  const amount = kind === "one_time" ? ONE_TIME_BONUS : RECURRING_BONUS;
+
+  const { error } = await supabase.from("rep_commission_events").insert({
+    store_id: store.id,
+    sales_rep_id: store.sales_rep_id,
+    stripe_invoice_id: invoiceId,
+    kind,
+    amount,
+    paid_at: new Date(paidAtUnix * 1000).toISOString(),
+  });
+  if (error && !error.message?.toLowerCase().includes("duplicate")) {
+    console.error("[stripe] recordRepCommission insert", error);
   }
 }
 
