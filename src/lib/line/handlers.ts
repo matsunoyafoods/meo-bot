@@ -64,8 +64,10 @@ function langMenu(): LineQuickAction[] {
   ];
 }
 
-function reply(replyToken: string, text: string, quick?: LineQuickAction[]): Promise<boolean> {
-  return lineReply(replyToken, [textMessage(text, quick)]);
+async function reply(replyToken: string, text: string, quick?: LineQuickAction[]): Promise<boolean> {
+  const ok = await lineReply(replyToken, [textMessage(text, quick)]);
+  console.log("[line] reply", JSON.stringify({ ok, len: text.length, quick: quick?.length ?? 0 }));
+  return ok;
 }
 
 /** グループなら groupId、そうでなければ userId を「このチャットの店舗ID」とする */
@@ -76,6 +78,16 @@ function chatIdOf(event: LineWebhookEvent): string | null {
 export async function handleLineEvent(event: LineWebhookEvent): Promise<void> {
   const replyToken = event.replyToken;
   const chatId = chatIdOf(event);
+  console.log(
+    "[line] event",
+    JSON.stringify({
+      type: event.type,
+      src: event.source?.type,
+      hasToken: Boolean(replyToken),
+      data: event.postback?.data,
+      text: event.message?.text?.slice(0, 30),
+    }),
+  );
   if (!chatId || !replyToken) return;
 
   // 友だち追加 / グループ参加 → ウェルカム＋メニュー
