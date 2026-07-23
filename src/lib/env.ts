@@ -55,6 +55,7 @@ export const env = {
 
   // LINE（Messaging API）。未設定でもアプリは動く（LINE連携だけ無効）。
   // 日本市場向けにTelegramと並行提供する。
-  lineChannelAccessToken: () => optional("LINE_CHANNEL_ACCESS_TOKEN", ""),
-  lineChannelSecret: () => optional("LINE_CHANNEL_SECRET", ""),
+  // 貼り付け時に混入しがちな空白・改行を除去（Authorizationヘッダで空白があると401になるため）。
+  lineChannelAccessToken: () => optional("LINE_CHANNEL_ACCESS_TOKEN", "").replace(/\s+/g, ""),
+  lineChannelSecret: () => optional("LINE_CHANNEL_SECRET", "").replace(/\s+/g, ""),
 } as const;
