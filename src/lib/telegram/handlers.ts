@@ -17,6 +17,7 @@ import type { OwnerLang, StoreRow, ReviewRow } from "@/lib/supabase/database.typ
 import {
   ensureStoreForChat,
   getStoreByChatId,
+  getStoreById,
   getStoreByInviteToken,
   addReportChat,
   updateStore,
@@ -25,6 +26,7 @@ import {
   clearOwnerState,
   getReview,
 } from "@/lib/repo";
+import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { buildAuthUrl } from "@/lib/google/oauth";
 import { bindStoreByInvite } from "@/lib/admin-stores";
 import { attributeStoreToRep } from "@/lib/admin-reps";
@@ -93,6 +95,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
   if (text.startsWith("/menu")) return cmdMenu(chatId);
   if (text.startsWith("/subscribe")) return cmdSubscribe(chatId);
   if (text.startsWith("/manage")) return cmdManage(chatId);
+  if (text.startsWith("/reply")) return cmdReply(chatId, text);
 
   // 常設リプライキーボードのボタン（＝ボタン文字が普通のメッセージで届く）→ 対応動作へ
   const menuAction = resolveMenuLabel(text);
@@ -443,7 +446,8 @@ async function handleContactText(store: StoreRow, chatId: number, text: string):
     `chat_id: <code>${chatId}</code>\n` +
     `store_id: <code>${store.id}</code>\n` +
     `— — —\n` +
-    `${escapeHtml(body)}`;
+    `${escapeHtml(body)}\n\n` +
+    `返信: <code>/reply ${store.id} </code>`;
 
   const res = await sendMessage(adminId, forward);
   if (!res.message_id) {
@@ -451,6 +455,52 @@ async function handleContactText(store: StoreRow, chatId: number, text: string):
     return void sendMessage(chatId, t(lang, "contact_unavailable"));
   }
   await sendMessage(chatId, t(lang, "contact_sent"));
+}
+
+/**
+ * 管理者(Tom)専用: 問い合わせへの返信を店舗のチャネル（LINE/Telegramどちらでも）へ配信する。
+ * 使い方: /reply <store_id> <メッセージ>
+ * 問い合わせ転送メッセージに載せている store_id をそのまま使う想定。
+ */
+async function cmdReply(chatId: number, text: string): Promise<void> {
+  const adminId = Number(env.adminTelegramChatId());
+  if (!adminId || Number.isNaN(adminId) || chatId !== adminId) {
+    return; // 管理者以外には無反応（コマンドの存在を教えない）
+  }
+
+  const rest = text.slice("/reply".length).trim();
+  const spaceIdx = rest.indexOf(" ");
+  if (spaceIdx < 0) {
+    return void sendMessage(chatId, "使い方: /reply <store_id> <メッセージ>");
+  }
+  const storeId = rest.slice(0, spaceIdx).trim();
+  const message = rest.slice(spaceIdx + 1).trim();
+  if (!storeId || !message) {
+    return void sendMessage(chatId, "使い方: /reply <store_id> <メッセージ>");
+  }
+
+  const store = await getStoreById(storeId);
+  if (!store) {
+    return void sendMessage(chatId, `store_id が見つかりません: ${escapeHtml(storeId)}`);
+  }
+  if (!storeHasChannel(store)) {
+    return void sendMessage(
+      chatId,
+      `この店舗には配信先チャネルがありません（${escapeHtml(store.name || "店名未設定")}）`,
+    );
+  }
+
+  try {
+    await deliverToStore(store, `📩 <b>お問い合わせへの返信</b>\n\n${escapeHtml(message)}`);
+    const channel = store.platform === "line" ? "LINE" : "Telegram";
+    await sendMessage(
+      chatId,
+      `✅ ${escapeHtml(store.name || "店名未設定")}（${channel}）へ送信しました。`,
+    );
+  } catch (e) {
+    console.error("[telegram] cmdReply deliver error", e);
+    await sendMessage(chatId, "送信に失敗しました。");
+  }
 }
 
 async function cmdPost(chatId: number): Promise<void> {
