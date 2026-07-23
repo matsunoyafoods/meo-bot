@@ -7,7 +7,9 @@ export interface AdminStoreView {
   id: string;
   name: string;
   telegram_chat_id: number | null;
-  linked: boolean; // Telegram に紐づけ済みか
+  platform: "telegram" | "line";
+  line_user_id: string | null;
+  linked: boolean; // Telegram/LINE いずれかに紐づけ済みか
   onboarded: boolean; // Google 連携済みか
   status: "active" | "suspended";
   owner_lang: OwnerLang;
@@ -33,7 +35,9 @@ async function toView(row: StoreRow, botUsername: string): Promise<AdminStoreVie
     id: row.id,
     name: row.name,
     telegram_chat_id: row.telegram_chat_id,
-    linked: row.telegram_chat_id != null,
+    platform: row.platform,
+    line_user_id: row.line_user_id,
+    linked: row.telegram_chat_id != null || row.line_user_id != null,
     onboarded: row.onboarded,
     status: row.status,
     owner_lang: row.owner_lang,

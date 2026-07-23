@@ -6,6 +6,8 @@ interface StoreView {
   id: string;
   name: string;
   telegram_chat_id: number | null;
+  platform: "telegram" | "line";
+  line_user_id: string | null;
   linked: boolean;
   onboarded: boolean;
   status: "active" | "suspended";
@@ -42,6 +44,7 @@ const STR: Record<Lang, Dict> = {
     store_list: "店舗一覧",
     no_stores: "まだ店舗がありません。",
     linked: "Telegram紐づけ済",
+    linked_line: "LINE紐づけ済",
     not_linked: "未紐づけ",
     google_linked: "Google連携済",
     google_not: "Google未連携",
@@ -86,6 +89,7 @@ const STR: Record<Lang, Dict> = {
     store_list: "Stores",
     no_stores: "No stores yet.",
     linked: "Telegram linked",
+    linked_line: "LINE linked",
     not_linked: "Not linked",
     google_linked: "Google connected",
     google_not: "Google not connected",
@@ -130,6 +134,7 @@ const STR: Record<Lang, Dict> = {
     store_list: "បញ្ជីហាង",
     no_stores: "មិនទាន់មានហាងទេ។",
     linked: "ភ្ជាប់ Telegram រួច",
+    linked_line: "ភ្ជាប់ LINE រួច",
     not_linked: "មិនទាន់ភ្ជាប់",
     google_linked: "ភ្ជាប់ Google រួច",
     google_not: "មិនទាន់ភ្ជាប់ Google",
@@ -174,6 +179,7 @@ const STR: Record<Lang, Dict> = {
     store_list: "店铺列表",
     no_stores: "还没有店铺。",
     linked: "已绑定 Telegram",
+    linked_line: "已绑定 LINE",
     not_linked: "未绑定",
     google_linked: "已连接 Google",
     google_not: "未连接 Google",
@@ -441,10 +447,16 @@ export default function AdminPage() {
                 </div>
                 <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
                   {s.telegram_chat_id != null && <>Chat ID: {s.telegram_chat_id} ・ </>}
+                  {s.platform === "line" && s.line_user_id != null && (
+                    <>LINE ID: {s.line_user_id.slice(0, 8)}… ・ </>
+                  )}
                   {t("created")}: {new Date(s.created_at).toLocaleDateString()}
                 </div>
                 <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
-                  {s.linked ? `🟢 ${t("linked")}` : `⚪ ${t("not_linked")}`} ・{" "}
+                  {s.linked
+                    ? `🟢 ${t(s.platform === "line" ? "linked_line" : "linked")}`
+                    : `⚪ ${t("not_linked")}`}{" "}
+                  ・{" "}
                   {s.onboarded ? `🔗 ${t("google_linked")}` : `⛔ ${t("google_not")}`} ・{" "}
                   {t("avg_ticket")} {s.avg_ticket_amount} {s.avg_ticket_currency}
                 </div>
