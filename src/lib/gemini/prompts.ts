@@ -23,6 +23,7 @@ const LANG_LABEL: Record<string, string> = {
   km: "Khmer (ភាសាខ្មែរ)",
   en: "English",
   zh: "Chinese (中文)",
+  ko: "Korean (한국어)",
 };
 
 export function langLabel(code: string): string {
@@ -118,37 +119,63 @@ export function ownerEditToReplySystemPrompt(
 export function articleSystemPrompt(
   store: StoreContext,
   ownerLang: string,
+  targetLangs: string[],
 ): string {
   return `You write short "What's new" posts for a restaurant's Google Business Profile. Your PRIMARY GOAL is local SEO (MEO): each post must help this restaurant get FOUND by nearby customers searching Google Maps / Google. This is MEO content, not generic marketing copy — every post is a chance to rank for the terms real customers type.
 
 STORE CONTEXT:
 ${storeBlock(store)}
 
-IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
-- The MEO keywords and the theme above may be written in the OWNER's own language (for example Japanese). They describe WHAT to write about — they are NOT text to copy.
-- Translate and localise the MEANING of every keyword into each target language. NEVER paste a foreign-language word (e.g. Japanese characters) verbatim into a Khmer or English post. The published posts must be 100% in the target language, with no mixed-in Japanese.
-- PROPER NOUNS (the store name and the area/locality) may also be written in the owner's language. Render them in the TARGET language's own script by TRANSLITERATION (how they sound), not by meaning: romanise for the English post, use Khmer script for the Khmer post — e.g. "天文館" → "Tenmonkan" (en) / "តេនម៉ុនកាន់" (km); "鹿児島" → "Kagoshima". A reader must be able to read every single character of the post; NEVER leave Japanese/Chinese characters inside a Khmer or English post, not even for the store name.
+${targetLangBlock(targetLangs)}
 
 REQUIREMENTS:
 - Pick an everyday, authentic angle from the given theme (e.g. the broth simmered overnight, the char siu, the hospitality). Make it feel real and specific, not generic marketing.
 - MEO / searchability: write so a nearby customer searching Google would find this. Naturally weave in the words people actually search for that FIT this post — the cuisine, the specific dish being featured, and (if known) the area. Include the store name once.
 - KEYWORD SELECTION (important): from the MEO keywords list, use ONLY the 1–2 keywords that genuinely match THIS post's topic. NEVER dump every keyword into the post, and NEVER force a keyword that doesn't fit the content — that reads as spam and hurts ranking. If a keyword is about ramen but the post is about the atmosphere, don't use it. Choose the keyword to fit the content, not the content to fit the keyword. The optimisation must be invisible: it must read like a natural human post first, and be search-friendly second.
 - Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
-- Write the SAME post in Khmer ("km") and English ("en"). They should convey the same content, localised — not a word-for-word translation.
 - Each version: 2–4 short sentences, friendly, appetising. One soft call-to-action (e.g. "Come try it today"). At most one relevant emoji per version.
-- Also provide "body_owner": a faithful, natural translation of the post into ${langLabel(
-    ownerLang,
-  )}, so the store owner can understand exactly what will be published. This version is for the owner to review only — it will NOT be posted publicly.
 - Google Business posts have a ~1500 character limit; stay well under it.
+${ownerReviewLine(ownerLang, targetLangs)}
 - Return ONLY valid JSON, no markdown:
 {
   "topic": "<one-line summary of the angle you chose, written in ${langLabel(
     ownerLang,
   )}>",
-  "body_km": "<Khmer post>",
-  "body_en": "<English post>",
-  "body_owner": "<the same post translated into ${langLabel(ownerLang)}>"
+  "posts": {
+${postsJsonKeys(targetLangs)}
+  },
+  "body_owner": "<the post translated into ${langLabel(
+    ownerLang,
+  )} for the owner to review, or an empty string if that language is already a target language>"
 }`;
+}
+
+/** 公開対象言語の説明ブロック（言語ごとの文字体系ルールを動的に生成） */
+function targetLangBlock(targetLangs: string[]): string {
+  const list = targetLangs.map((l) => `"${l}" (${langLabel(l)})`).join(", ");
+  return `TARGET LANGUAGES (write the post in EACH of these):
+- Produce one version of the post per language: ${list}. Each version conveys the same offer/message, localised naturally — NOT a word-for-word translation.
+
+LANGUAGE & PROPER NOUNS:
+- The MEO keywords and theme may be written in the owner's own language (e.g. Japanese). They describe WHAT to write about — they are NOT text to copy.
+- Write each post 100% in its own target language's native script. Do NOT mix in words from another language.
+- Japanese ("ja") and Chinese ("zh") posts: KEEP the store name and area in their original Japanese/Chinese characters — do NOT romanise them (e.g. keep "天文館", "鹿児島").
+- English ("en"), Khmer ("km"), Korean ("ko") posts: TRANSLITERATE any proper noun written in Japanese/Chinese into that script by how it SOUNDS — e.g. "天文館" → "Tenmonkan" (en) / "តេនម៉ុនកាន់" (km) / "텐몬칸" (ko); "鹿児島" → "Kagoshima". Never leave Japanese/Chinese characters inside an English, Khmer or Korean post, not even for the store name.`;
+}
+
+function ownerReviewLine(ownerLang: string, targetLangs: string[]): string {
+  if (targetLangs.includes(ownerLang)) {
+    return `- "body_owner" is not needed (the owner's language is already a target language) — return an empty string for it.`;
+  }
+  return `- Also provide "body_owner": a faithful, natural translation of the post into ${langLabel(
+    ownerLang,
+  )}, so the store owner can understand exactly what will be published. This is for the owner to review only — it will NOT be posted publicly.`;
+}
+
+function postsJsonKeys(targetLangs: string[]): string {
+  return targetLangs
+    .map((l) => `    "${l}": "<the post written in ${langLabel(l)}>"`)
+    .join(",\n");
 }
 
 export function articleUserPrompt(theme: string): string {
@@ -161,48 +188,46 @@ export function articleUserPrompt(theme: string): string {
 export function articleEditSystemPrompt(
   store: StoreContext,
   ownerLang: string,
+  targetLangs: string[],
 ): string {
   return `You are editing an existing "What's new" post for a restaurant's Google Business Profile.
 
 STORE CONTEXT:
 ${storeBlock(store)}
 
-You will receive the CURRENT draft (Khmer + English) and the OWNER's instruction, written in ${langLabel(
+You will receive the CURRENT draft and the OWNER's instruction, written in ${langLabel(
     ownerLang,
   )}, describing how they want to change the post (or the new content they want).
 
-IMPORTANT ABOUT KEYWORDS AND LANGUAGE:
+${targetLangBlock(targetLangs)}
 - The owner's instruction may be written in their own language (e.g. Japanese). Treat it as MEANING to apply — NOT text to copy.
-- Translate and localise the meaning into each target language. NEVER paste a foreign-language word (e.g. Japanese characters) verbatim into a Khmer or English post. The published posts must be 100% in the target language.
-- PROPER NOUNS (store name, area/locality) must be TRANSLITERATED into the target script (romanised for English, Khmer script for Khmer) — e.g. "天文館" → "Tenmonkan" / "តេនម៉ុនកាន់". Never leave Japanese/Chinese characters inside a Khmer or English post, not even for the store name.
 
 REQUIREMENTS:
 - Apply the owner's instruction to the post. Keep whatever they did not ask to change. If they wrote entirely new content, base the post on that.
 - This is MEO content: keep it search-friendly so nearby customers find it. Include the store name once.
 - KEYWORD SELECTION: use ONLY the 1–2 MEO keywords that genuinely fit this post's content — never cram in all keywords, never force one that doesn't match the topic. Optimisation must stay invisible and read naturally.
 - Only mention a city/area/country if it is explicitly given in STORE CONTEXT above. If the locality is UNKNOWN, do NOT invent or guess one — never name a city or country.
-- Keep the SAME post in Khmer ("km") and English ("en"), 2–4 short sentences each, friendly and appetising, one soft call-to-action, at most one emoji per version.
-- Also provide "body_owner": a faithful translation of the revised post into ${langLabel(
-    ownerLang,
-  )} so the owner can review it. This is for review only — it will NOT be posted publicly.
+- Each version: 2–4 short sentences, friendly and appetising, one soft call-to-action, at most one emoji per version.
 - Google Business posts have a ~1500 character limit; stay well under it.
+${ownerReviewLine(ownerLang, targetLangs)}
 - Return ONLY valid JSON, no markdown:
 {
   "topic": "<one-line summary in ${langLabel(ownerLang)}>",
-  "body_km": "<revised Khmer post>",
-  "body_en": "<revised English post>",
-  "body_owner": "<the revised post translated into ${langLabel(ownerLang)}>"
+  "posts": {
+${postsJsonKeys(targetLangs)}
+  },
+  "body_owner": "<the revised post translated into ${langLabel(
+    ownerLang,
+  )} for review, or an empty string if that language is already a target language>"
 }`;
 }
 
 export function articleEditUserPrompt(args: {
-  currentKm: string | null;
-  currentEn: string | null;
+  currentPosts: Record<string, string>;
   instruction: string;
 }): string {
   return JSON.stringify({
-    current_post_km: args.currentKm ?? "",
-    current_post_en: args.currentEn ?? "",
+    current_posts: args.currentPosts,
     owner_instruction: args.instruction,
   });
 }

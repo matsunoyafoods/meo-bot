@@ -90,14 +90,14 @@ export function generateArticle(
   store: StoreContext,
   theme: string,
   ownerLang: string,
+  targetLangs: string[],
 ): Promise<{
   topic: string;
-  body_km: string;
-  body_en: string;
+  posts: Record<string, string>;
   body_owner: string;
 }> {
   return generateJson(
-    articleSystemPrompt(store, ownerLang),
+    articleSystemPrompt(store, ownerLang, targetLangs),
     articleUserPrompt(theme),
   );
 }
@@ -105,16 +105,16 @@ export function generateArticle(
 /* ---------- ④-b 記事の編集（オーナー指示で作り直す） ---------- */
 export function reviseArticle(
   store: StoreContext,
-  args: { currentKm: string | null; currentEn: string | null; instruction: string },
+  args: { currentPosts: Record<string, string>; instruction: string },
   ownerLang: string,
+  targetLangs: string[],
 ): Promise<{
   topic: string;
-  body_km: string;
-  body_en: string;
+  posts: Record<string, string>;
   body_owner: string;
 }> {
   return generateJson(
-    articleEditSystemPrompt(store, ownerLang),
+    articleEditSystemPrompt(store, ownerLang, targetLangs),
     articleEditUserPrompt(args),
   );
 }

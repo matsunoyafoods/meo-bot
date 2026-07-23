@@ -22,6 +22,27 @@ function pickTheme(seed: number): string {
 }
 
 /**
+ * 店舗の市場に応じた「Google公開言語」を返す。
+ * - LINE（日本市場）: 日本語のみ（MEO最優先）
+ * - Telegram（カンボジア市場）: クメール語 + 英語
+ * DBの posts.body_km を「主要言語スロット」、body_en を「副言語スロット」として使う。
+ */
+export function postLangsForStore(store: Pick<StoreRow, "platform">): string[] {
+  return store.platform === "line" ? ["ja"] : ["km", "en"];
+}
+
+/** 生成結果(posts)を DBの2スロット(body_km=主, body_en=副)へ割り当てる */
+function bodiesFromPosts(
+  posts: Record<string, string>,
+  targetLangs: string[],
+): { body_km: string; body_en: string | null } {
+  return {
+    body_km: posts[targetLangs[0]] ?? "",
+    body_en: targetLangs[1] ? (posts[targetLangs[1]] ?? "") : null,
+  };
+}
+
+/**
  * 機能④: 週3回、記事下書きを生成して Telegram に送る（テーマは自動ローテーション）。
  */
 export async function generateAndProposeArticle(store: StoreRow): Promise<void> {
@@ -41,12 +62,15 @@ export async function proposeArticle(store: StoreRow, theme: string): Promise<vo
   const supabase = createSupabaseAdminClient();
   const ctx = toStoreContext(store);
   const lang = store.owner_lang;
+  const targetLangs = postLangsForStore(store);
 
-  const { topic, body_km, body_en, body_owner } = await generateArticle(
+  const { topic, posts, body_owner } = await generateArticle(
     ctx,
     theme,
     lang,
+    targetLangs,
   );
+  const { body_km, body_en } = bodiesFromPosts(posts, targetLangs);
 
   const insert: PostInsert = {
     store_id: store.id,
@@ -85,11 +109,18 @@ export async function reviseArticlePost(
   if (!post) throw new Error(`post ${postId} not found`);
 
   const ctx = toStoreContext(store);
-  const { topic, body_km, body_en, body_owner } = await reviseArticle(
+  const targetLangs = postLangsForStore(store);
+  const currentPosts: Record<string, string> = {};
+  currentPosts[targetLangs[0]] = post.body_km ?? "";
+  if (targetLangs[1]) currentPosts[targetLangs[1]] = post.body_en ?? "";
+
+  const { topic, posts, body_owner } = await reviseArticle(
     ctx,
-    { currentKm: post.body_km, currentEn: post.body_en, instruction },
+    { currentPosts, instruction },
     store.owner_lang,
+    targetLangs,
   );
+  const { body_km, body_en } = bodiesFromPosts(posts, targetLangs);
 
   const { data: updated } = await supabase
     .from("posts")
@@ -109,11 +140,20 @@ async function sendPostDraft(
 ): Promise<void> {
   if (!storeHasChannel(store)) return;
   const lang = store.owner_lang;
+  const targetLangs = postLangsForStore(store);
 
-  // オーナー母国語版（ja/km/en/zh）を先頭に表示。ただし公開言語(km/en)と
-  // 重複する場合は省く。
+  // 公開言語の本文（body_km=主, body_en=副）をラベル付きで表示。
+  const bodies = [post.body_km, post.body_en];
+  const langBlocks: string[] = [];
+  targetLangs.forEach((code, i) => {
+    const body = bodies[i];
+    if (!body) return;
+    langBlocks.push(`<b>${langLabel(code)}:</b>`, escapeHtml(body), "");
+  });
+
+  // オーナー母国語版：公開言語に含まれない場合のみ確認用に先頭表示。
   const ownerBlock =
-    bodyOwner && lang !== "km" && lang !== "en"
+    bodyOwner && !targetLangs.includes(lang)
       ? [`<b>${langLabel(lang)}:</b>`, escapeHtml(bodyOwner), ""]
       : [];
 
@@ -122,12 +162,10 @@ async function sendPostDraft(
     `<i>${escapeHtml(post.topic ?? "")}</i>`,
     "",
     ...ownerBlock,
-    "<b>ភាសាខ្មែរ (Khmer):</b>",
-    escapeHtml(post.body_km ?? ""),
-    "",
-    "<b>English:</b>",
-    escapeHtml(post.body_en ?? ""),
-  ].join("\n");
+    ...langBlocks,
+  ]
+    .join("\n")
+    .trimEnd();
 
   await deliverToStore(store, text, [
     [{ text: t(lang, "btn_publish"), data: `post_pub:${post.id}` }],
