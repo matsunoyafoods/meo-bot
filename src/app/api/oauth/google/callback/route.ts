@@ -96,10 +96,11 @@ export async function GET(req: Request): Promise<NextResponse> {
     console.error("[oauth] notify error", e);
   }
 
+  const backTo = store.platform === "line" ? "LINE" : "Telegram";
   return html(
     locationLinked
-      ? "✅ 連携が完了しました。Telegramに戻ってください。"
-      : "✅ Googleログイン完了。店舗接続はAPI利用承認後に有効になります。Telegramに戻ってください。",
+      ? `✅ 連携が完了しました。${backTo}に戻ってください。`
+      : `✅ Googleログイン完了。店舗接続はAPI利用承認後に有効になります。${backTo}に戻ってください。`,
   );
 }
 
