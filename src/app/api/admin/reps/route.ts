@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
-import { listRepsForAdmin, createRepForAdmin } from "@/lib/admin-reps";
+import { listRepsForAdmin, createRepForAdmin, currentMonth } from "@/lib/admin-reps";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,8 +12,9 @@ export async function GET(req: Request): Promise<NextResponse> {
   }
   const month = new URL(req.url).searchParams.get("month") || undefined;
   const monthMatch = month && /^\d{4}-\d{2}$/.test(month) ? month : undefined;
-  const reps = await listRepsForAdmin(monthMatch);
-  return NextResponse.json({ ok: true, reps, month: reps[0]?.month ?? monthMatch });
+  const payoutMonth = monthMatch ?? currentMonth();
+  const reps = await listRepsForAdmin(payoutMonth);
+  return NextResponse.json({ ok: true, reps, month: payoutMonth });
 }
 
 /** 営業マンを新規作成（専用リンク発行） */
