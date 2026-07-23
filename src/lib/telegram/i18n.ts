@@ -57,6 +57,7 @@ const ja: Dict = {
   not_connected: "先にGoogleと連携してください。/start を押してください。",
   error: "⚠️ エラーが発生しました。時間をおいて再度お試しください。",
   generating: "✍️ 投稿文を作成しています…（少々お待ちください）",
+  processing: "⏳ 処理しています…（少々お待ちください）",
   publish_needs_google:
     "✅ 下書きを保存しました。Google連携が有効になると、Googleビジネスプロフィールへ公開できます（現在はGoogle側の利用承認待ちです）。",
   ask_post_keyword:
@@ -164,6 +165,7 @@ const en: Dict = {
   not_connected: "Please connect Google first. Tap /start.",
   error: "⚠️ Something went wrong. Please try again later.",
   generating: "✍️ Creating your post… (this takes a moment)",
+  processing: "⏳ Working on it… (this takes a moment)",
   publish_needs_google:
     "✅ Draft saved. Once your Google connection is active, it can be published to your Google Business Profile (currently pending Google approval).",
   ask_post_keyword:
@@ -271,6 +273,7 @@ const km: Dict = {
   not_connected: "សូមភ្ជាប់ Google ជាមុនសិន។ ចុច /start។",
   error: "⚠️ មានបញ្ហា។ សូមព្យាយាមម្តងទៀត។",
   generating: "✍️ កំពុងបង្កើតអត្ថបទ… (សូមរង់ចាំបន្តិច)",
+  processing: "⏳ កំពុងដំណើរការ… (សូមរង់ចាំបន្តិច)",
   publish_needs_google:
     "✅ បានរក្សាទុកសេចក្តីព្រាង។ នៅពេលការភ្ជាប់ Google សកម្ម វានឹងអាចផ្សាយទៅ Google Business Profile (បច្ចុប្បន្នកំពុងរង់ចាំការអនុម័តពី Google)។",
   ask_post_keyword:
@@ -377,6 +380,7 @@ const zh: Dict = {
   not_connected: "请先连接 Google。点击 /start。",
   error: "⚠️ 出现错误，请稍后再试。",
   generating: "✍️ 正在生成帖子内容…（请稍候）",
+  processing: "⏳ 正在处理…（请稍候）",
   publish_needs_google:
     "✅ 草稿已保存。Google 连接生效后即可发布到 Google 商家资料（目前正在等待 Google 审批）。",
   ask_post_keyword:
@@ -484,6 +488,7 @@ const ko: Dict = {
   not_connected: "먼저 Google과 연동해 주세요. /start 를 눌러 주세요.",
   error: "⚠️ 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
   generating: "✍️ 게시글을 작성하고 있습니다…(잠시만 기다려 주세요)",
+  processing: "⏳ 처리하고 있습니다…(잠시만 기다려 주세요)",
   publish_needs_google:
     "✅ 초안을 저장했습니다. Google 연동이 활성화되면 Google 비즈니스 프로필에 게시할 수 있습니다(현재 Google 승인 대기 중입니다).",
   ask_post_keyword:

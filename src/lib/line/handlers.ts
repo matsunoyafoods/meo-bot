@@ -11,8 +11,10 @@ import {
   setOwnerState,
   clearOwnerState,
   updateStore,
+  getReview,
 } from "@/lib/repo";
 import { t, langName } from "@/lib/telegram/i18n";
+import { langLabel } from "@/lib/gemini/prompts";
 import { sendMessage as tgSendMessage } from "@/lib/telegram/client";
 import { env } from "@/lib/env";
 import { randomUUID } from "node:crypto";
@@ -21,6 +23,17 @@ import { buildAuthUrl } from "@/lib/google/oauth";
 import { isStoreUsable } from "@/lib/trial";
 import { runDiagnosis } from "@/lib/workflows/diagnose";
 import { proposeArticle, reviseArticlePost, publishPost } from "@/lib/workflows/article";
+import {
+  startBacklog,
+  generateHighStarDrafts,
+  pushLowStarQueue,
+  bulkSendHighStar,
+  highStarOneByOne,
+} from "@/lib/workflows/backlog";
+import {
+  sendReviewReply,
+  reviseReviewAndPreview,
+} from "@/lib/workflows/review-router";
 import { createSubscribeUrl, createPortalUrl, stripeConfigured } from "@/lib/stripe";
 import type { OwnerLang, StoreRow } from "@/lib/supabase/database.types";
 
@@ -179,6 +192,18 @@ async function handleLineText(store: StoreRow, replyToken: string, text: string)
     }
     return;
   }
+  if (state?.mode === "awaiting_review_edit") {
+    const reviewId = state.context.review_id as string;
+    await clearOwnerState(store.id);
+    if (!text) return void await reply(replyToken, t(lang, "menu_title"), mainMenu(store));
+    await reply(replyToken, t(lang, "generating"));
+    try {
+      await reviseReviewAndPreview(store, reviewId, text);
+    } catch (e) {
+      console.error("[line] review edit error", e);
+    }
+    return;
+  }
 
   // 状態なし → メニューを表示
   await reply(replyToken, t(lang, "menu_title"), mainMenu(store));
@@ -306,13 +331,54 @@ async function handleLinePostback(store: StoreRow, replyToken: string, data: str
     return void await reply(replyToken, t(lang, "skipped"), mainMenu(store));
   }
 
-  // 口コミは次段で接続
+  // 口コミ返信（未返信バックログ）。Google連携が必要。
   if (data === "menu_reviews") {
-    return void await reply(
-      replyToken,
-      "口コミ返信はまもなくLINEでもご利用いただけます（準備中です）。",
-      mainMenu(store),
-    );
+    if (!isStoreUsable(store)) {
+      return void await reply(replyToken, t(lang, "trial_ended"), mainMenu(store));
+    }
+    if (!store.onboarded) {
+      return void await sendGoogleConnect(store, replyToken);
+    }
+    // 取得・生成は数秒かかる。結果はプッシュ配信（deliverToStore）で届く。
+    await reply(replyToken, t(lang, "diagnose_running"));
+    try {
+      await startBacklog(store);
+    } catch (e) {
+      console.error("[line] startBacklog error", e);
+      await reply(replyToken, t(lang, "error"));
+    }
+    return;
+  }
+  // バックログ操作
+  if (["bk_high", "bk_low", "bk_sendall", "bk_one"].includes(data)) {
+    await reply(replyToken, t(lang, "processing"));
+    try {
+      if (data === "bk_high") await generateHighStarDrafts(store);
+      else if (data === "bk_low") await pushLowStarQueue(store);
+      else if (data === "bk_sendall") await bulkSendHighStar(store);
+      else await highStarOneByOne(store);
+    } catch (e) {
+      console.error("[line] backlog action error", e);
+      await reply(replyToken, t(lang, "error"));
+    }
+    return;
+  }
+  // 口コミ返信: 送信 / 編集 / スキップ
+  if (data.startsWith("rev_send:")) {
+    const ok = await sendReviewReply(store, data.split(":")[1]);
+    return void await reply(replyToken, t(lang, ok ? "sent" : "error"), mainMenu(store));
+  }
+  if (data.startsWith("rev_edit:")) {
+    const reviewId = data.split(":")[1];
+    await setOwnerState(store.id, "awaiting_review_edit", { review_id: reviewId });
+    const rv = await getReview(reviewId);
+    const reviewerLang = rv?.review_lang ?? "en";
+    return void await reply(replyToken, t(lang, "ask_edit", { lang: langLabel(reviewerLang) }));
+  }
+  if (data.startsWith("rev_skip:")) {
+    const supabase = createSupabaseAdminClient();
+    await supabase.from("reviews").update({ status: "skipped" }).eq("id", data.split(":")[1]);
+    return void await reply(replyToken, t(lang, "skipped"), mainMenu(store));
   }
 
   await reply(replyToken, t(lang, "menu_title"), mainMenu(store));

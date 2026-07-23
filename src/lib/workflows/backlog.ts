@@ -7,7 +7,7 @@ import {
 } from "@/lib/google/business";
 import { generateReviewReply, translateReviewForOwner } from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
-import { sendMessage } from "@/lib/telegram/client";
+import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { notifyOwnerLowStar } from "@/lib/workflows/review-router";
 import { t } from "@/lib/telegram/i18n";
 
@@ -20,12 +20,11 @@ const LOW_CAP = 8;
  * /reviews → 未返信を取得・集計して、ハイブリッド処理の入口を出す。
  */
 export async function startBacklog(store: StoreRow): Promise<void> {
-  if (!store.telegram_chat_id) return;
-  const chatId = store.telegram_chat_id;
+  if (!storeHasChannel(store)) return;
   const lang = store.owner_lang;
 
   if (!store.google_account_id || !store.google_location_id) {
-    return void sendMessage(chatId, t(lang, "not_connected"));
+    return void (await deliverToStore(store, t(lang, "not_connected")));
   }
 
   const reviews = await listReviews(
@@ -53,17 +52,17 @@ export async function startBacklog(store: StoreRow): Promise<void> {
 
   const { high, low } = await countPending(store.id);
   if (high + low === 0) {
-    return void sendMessage(chatId, t(lang, "backlog_none"));
+    return void (await deliverToStore(store, t(lang, "backlog_none")));
   }
 
-  const buttons = [];
+  const buttons: { text: string; data: string }[][] = [];
   if (high > 0)
-    buttons.push([{ text: t(lang, "backlog_btn_high", { n: high }), callback_data: "bk_high" }]);
+    buttons.push([{ text: t(lang, "backlog_btn_high", { n: high }), data: "bk_high" }]);
   if (low > 0)
-    buttons.push([{ text: t(lang, "backlog_btn_low", { n: low }), callback_data: "bk_low" }]);
+    buttons.push([{ text: t(lang, "backlog_btn_low", { n: low }), data: "bk_low" }]);
 
-  await sendMessage(
-    chatId,
+  await deliverToStore(
+    store,
     t(lang, "backlog_summary", { total: high + low, high, low }),
     buttons,
   );
@@ -71,7 +70,6 @@ export async function startBacklog(store: StoreRow): Promise<void> {
 
 /** 4-5★: 返信案をまとめて生成し、プレビュー＋「まとめて送信」を出す */
 export async function generateHighStarDrafts(store: StoreRow): Promise<void> {
-  const chatId = store.telegram_chat_id!;
   const lang = store.owner_lang;
   const ctx = toStoreContext(store);
   const supabase = createSupabaseAdminClient();
@@ -85,7 +83,7 @@ export async function generateHighStarDrafts(store: StoreRow): Promise<void> {
     .limit(HIGH_CAP)
     .returns<ReviewRow[]>();
   const pend = rows ?? [];
-  if (pend.length === 0) return void sendMessage(chatId, t(lang, "backlog_none"));
+  if (pend.length === 0) return void (await deliverToStore(store, t(lang, "backlog_none")));
 
   const done: ReviewRow[] = [];
   for (const rv of pend) {
@@ -115,19 +113,18 @@ export async function generateHighStarDrafts(store: StoreRow): Promise<void> {
     .join("\n");
   const more = done.length > 8 ? "\n…(+" + (done.length - 8) + ")" : "";
 
-  await sendMessage(
-    chatId,
+  await deliverToStore(
+    store,
     `${t(lang, "backlog_high_ready", { n: done.length })}\n\n${preview}${more}`,
     [
-      [{ text: t(lang, "backlog_btn_sendall"), callback_data: "bk_sendall" }],
-      [{ text: t(lang, "backlog_btn_oneby"), callback_data: "bk_one" }],
+      [{ text: t(lang, "backlog_btn_sendall"), data: "bk_sendall" }],
+      [{ text: t(lang, "backlog_btn_oneby"), data: "bk_one" }],
     ],
   );
 }
 
 /** 4-5★: 生成済みドラフトを一括送信 */
 export async function bulkSendHighStar(store: StoreRow): Promise<void> {
-  const chatId = store.telegram_chat_id!;
   const lang = store.owner_lang;
   const supabase = createSupabaseAdminClient();
 
@@ -154,7 +151,7 @@ export async function bulkSendHighStar(store: StoreRow): Promise<void> {
       console.error(`[backlog] send review ${rv.id} failed`, e);
     }
   }
-  await sendMessage(chatId, t(lang, "backlog_sent", { n: sent }));
+  await deliverToStore(store, t(lang, "backlog_sent", { n: sent }));
 }
 
 /** 4-5★: 一括ではなく1件ずつ確認に切り替え */
@@ -181,7 +178,6 @@ export async function highStarOneByOne(store: StoreRow): Promise<void> {
 
 /** 1-3★: 1件ずつ（翻訳＋返信案＋[送信][編集][スキップ]）を順に表示 */
 export async function pushLowStarQueue(store: StoreRow): Promise<void> {
-  const chatId = store.telegram_chat_id!;
   const lang = store.owner_lang;
   const ctx = toStoreContext(store);
   const supabase = createSupabaseAdminClient();
@@ -195,9 +191,9 @@ export async function pushLowStarQueue(store: StoreRow): Promise<void> {
     .limit(LOW_CAP)
     .returns<ReviewRow[]>();
   const pend = rows ?? [];
-  if (pend.length === 0) return void sendMessage(chatId, t(lang, "backlog_none"));
+  if (pend.length === 0) return void (await deliverToStore(store, t(lang, "backlog_none")));
 
-  await sendMessage(chatId, t(lang, "backlog_low_intro", { n: pend.length }));
+  await deliverToStore(store, t(lang, "backlog_low_intro", { n: pend.length }));
 
   for (const rv of pend) {
     const [{ review_lang, reply }, translation] = await Promise.all([
@@ -223,7 +219,7 @@ export async function pushLowStarQueue(store: StoreRow): Promise<void> {
   }
 
   const { low } = await countPending(store.id);
-  if (low > 0) await sendMessage(chatId, t(lang, "backlog_more", { n: low }));
+  if (low > 0) await deliverToStore(store, t(lang, "backlog_more", { n: low }));
 }
 
 /* ---------- helpers ---------- */

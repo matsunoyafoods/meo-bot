@@ -6,12 +6,18 @@ import type {
 } from "@/lib/supabase/database.types";
 import {
   listReviews,
+  replyToReview,
   starToNumber,
   type GbpReview,
 } from "@/lib/google/business";
-import { generateReviewReply, translateReviewForOwner } from "@/lib/gemini/client";
+import {
+  generateReviewReply,
+  translateReviewForOwner,
+  translateOwnerEditToReply,
+} from "@/lib/gemini/client";
 import { toStoreContext } from "@/lib/store-context";
-import { sendMessage } from "@/lib/telegram/client";
+import { getReview } from "@/lib/repo";
+import { deliverToStore, storeHasChannel } from "@/lib/messaging/deliver";
 import { t, langName } from "@/lib/telegram/i18n";
 import { langLabel } from "@/lib/gemini/prompts";
 
@@ -76,7 +82,7 @@ async function handleReviewApproval(
     star_rating: stars,
   });
 
-  if (store.telegram_chat_id) {
+  if (storeHasChannel(store)) {
     await notifyOwnerLowStar(store, review, reply, ownerTranslation, review_lang);
   }
 }
@@ -104,12 +110,84 @@ export async function notifyOwnerLowStar(
     escapeHtml(reply),
   ].join("\n");
 
-  await sendMessage(store.telegram_chat_id!, text, [
+  await deliverToStore(store, text, [
     [
-      { text: t(lang, "btn_send"), callback_data: `rev_send:${review.id}` },
-      { text: t(lang, "btn_edit"), callback_data: `rev_edit:${review.id}` },
+      { text: t(lang, "btn_send"), data: `rev_send:${review.id}` },
+      { text: t(lang, "btn_edit"), data: `rev_edit:${review.id}` },
     ],
-    [{ text: t(lang, "btn_skip_review"), callback_data: `rev_skip:${review.id}` }],
+    [{ text: t(lang, "btn_skip_review"), data: `rev_skip:${review.id}` }],
+  ]);
+}
+
+/* ---------- 口コミ返信アクション（Telegram/LINE 共通） ---------- */
+
+/** GBP のフルパスを組み立てる（reviews.google_review_id が末尾のみの場合に対応） */
+export function resolveReviewName(store: StoreRow, review: ReviewRow): string {
+  if (review.google_review_id.startsWith("accounts/")) return review.google_review_id;
+  const acc = store.google_account_id!.startsWith("accounts/")
+    ? store.google_account_id!
+    : `accounts/${store.google_account_id}`;
+  const loc = store.google_location_id!.startsWith("locations/")
+    ? store.google_location_id!
+    : `locations/${store.google_location_id}`;
+  return `${acc}/${loc}/reviews/${review.google_review_id}`;
+}
+
+/** 下書き返信をGoogleへ送信し、status を replied に更新。成功なら true。 */
+export async function sendReviewReply(
+  store: StoreRow,
+  reviewId: string,
+): Promise<boolean> {
+  const review = await getReview(reviewId);
+  if (!review || !review.draft_reply) return false;
+  try {
+    await replyToReview(store.id, resolveReviewName(store, review), review.draft_reply);
+  } catch (e) {
+    console.error("[reviews] sendReviewReply failed", e);
+    return false;
+  }
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("reviews")
+    .update({ status: "replied", replied_at: new Date().toISOString() })
+    .eq("id", reviewId);
+  return true;
+}
+
+/**
+ * オーナーの編集文を相手の言語の返信に変換して下書きを差し替え、
+ * 編集後プレビュー＋[送信][編集] ボタンを配信する（Telegram/LINE 共通）。
+ */
+export async function reviseReviewAndPreview(
+  store: StoreRow,
+  reviewId: string,
+  ownerText: string,
+): Promise<void> {
+  const lang = store.owner_lang;
+  const review = await getReview(reviewId);
+  if (!review) {
+    await deliverToStore(store, t(lang, "error"));
+    return;
+  }
+  const reviewerLang = review.review_lang ?? "en";
+  const reply = await translateOwnerEditToReply(
+    toStoreContext(store),
+    ownerText,
+    reviewerLang,
+  );
+
+  const supabase = createSupabaseAdminClient();
+  await supabase.from("reviews").update({ draft_reply: reply }).eq("id", reviewId);
+
+  const preview = [
+    `<b>${t(lang, "edit_preview", { lang: langLabel(reviewerLang) })}:</b>`,
+    escapeHtml(reply),
+  ].join("\n");
+  await deliverToStore(store, preview, [
+    [
+      { text: t(lang, "btn_send"), data: `rev_send:${reviewId}` },
+      { text: t(lang, "btn_edit"), data: `rev_edit:${reviewId}` },
+    ],
   ]);
 }
 
