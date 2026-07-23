@@ -89,7 +89,7 @@ async function reply(replyToken: string, text: string, quick?: LineQuickAction[]
 /**
  * イベントから「対象の店舗」を解決する。
  * - 1対1（userId）: そのユーザーの店舗（無ければ作成）＝オーナーの唯一の店舗。
- * - グループ（groupId）: 別店舗は作らない。line_chats でオーナー店舗を参照する。
+ * - グループ（groupId）: 別店舗は作らない。line_chats でオーナー店舗を参照。
  *   未紐づけなら、発話者(userId)がオーナー(bot友だち追加済み=userIdが取れる)であれば
  *   そのグループをオーナー店舗へ自動紐づけする。判定できなければ null。
  */
@@ -459,7 +459,7 @@ async function forwardContact(store: StoreRow, body: string): Promise<void> {
     `言語: ${store.owner_lang}\n` +
     `line_id: <code>${escapeHtml(store.line_user_id ?? "")}</code>\n` +
     `store_id: <code>${store.id}</code>\n— — —\n${escapeHtml(text)}\n\n` +
-    `返信: <code>/reply ${store.id} </code>`;
+    `↩️ このメッセージに Telegram で返信(reply)すると、そのまま店舗に届きます。`;
   try {
     await tgSendMessage(adminId, msg);
   } catch (e) {
