@@ -31,19 +31,13 @@ export function stripeConfigured(): boolean {
 
 /**
  * 店舗用の Checkout（月額サブスク）URLを作成。
- * 既存の無料期限が未来なら、その日まで無料（Stripeのtrial_end）にして二重無料を防ぐ。
+ * 無料期間はアプリ内（trial_ends_at）でのみ提供し、お申し込み（課金）後はStripe側の
+ * トライアルを付与しない＝即課金開始とする（無料期間の二重付与を避けるため）。
  */
 export async function createSubscribeUrl(store: StoreRow): Promise<string | null> {
   // Telegram / LINE どちらのチャネルでも可（宛先は store.id で紐付け）
   if (!stripeConfigured() || (!store.telegram_chat_id && !store.line_user_id)) return null;
   const s = stripe();
-
-  const nowSec = Math.floor(Date.now() / 1000);
-  const trialEndSec = store.trial_ends_at
-    ? Math.floor(new Date(store.trial_ends_at).getTime() / 1000)
-    : 0;
-  // 無料期間が2日以上残っている場合のみ Stripe 側のトライアルを設定（残りをそのまま無料に）
-  const useTrial = trialEndSec > nowSec + 2 * 86400;
 
   // 店舗の言語が日本語（owner_lang === "ja"）なら円建て価格を使う（未設定ならUSD価格にフォールバック）
   const priceId =
@@ -59,7 +53,6 @@ export async function createSubscribeUrl(store: StoreRow): Promise<string | null
     ...(store.stripe_customer_id ? { customer: store.stripe_customer_id } : {}),
     subscription_data: {
       metadata: { store_id: store.id },
-      ...(useTrial ? { trial_end: trialEndSec } : {}),
     },
     metadata: { store_id: store.id },
     allow_promotion_codes: true,
