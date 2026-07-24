@@ -52,6 +52,8 @@ export const env = {
   stripeSecretKey: () => optional("STRIPE_SECRET_KEY", ""),
   stripeWebhookSecret: () => optional("STRIPE_WEBHOOK_SECRET", ""),
   stripePriceId: () => optional("STRIPE_PRICE_ID", ""),
+  // 日本市場向け円建て価格（未設定ならUSD価格にフォールバック。owner_lang==='ja'の店舗に適用）
+  stripePriceIdJpy: () => optional("STRIPE_PRICE_ID_JPY", ""),
 
   // LINE（Messaging API）。未設定でもアプリは動く（LINE連携だけ無効）。
   // 日本市場向けにTelegramと並行提供する。

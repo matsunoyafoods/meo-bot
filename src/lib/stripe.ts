@@ -45,10 +45,16 @@ export async function createSubscribeUrl(store: StoreRow): Promise<string | null
   // 無料期間が2日以上残っている場合のみ Stripe 側のトライアルを設定（残りをそのまま無料に）
   const useTrial = trialEndSec > nowSec + 2 * 86400;
 
+  // 店舗の言語が日本語（owner_lang === "ja"）なら円建て価格を使う（未設定ならUSD価格にフォールバック）
+  const priceId =
+    store.owner_lang === "ja" && env.stripePriceIdJpy()
+      ? env.stripePriceIdJpy()
+      : env.stripePriceId();
+
   const session = await s.checkout.sessions.create({
     mode: "subscription",
     locale: checkoutLocale(store.owner_lang),
-    line_items: [{ price: env.stripePriceId(), quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: store.id,
     ...(store.stripe_customer_id ? { customer: store.stripe_customer_id } : {}),
     subscription_data: {
